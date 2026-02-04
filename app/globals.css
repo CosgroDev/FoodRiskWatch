@@ -1,0 +1,60 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: "Aptos", "Segoe UI", "Helvetica Neue", Arial, system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-base text-text m-0 min-h-screen antialiased;
+}
+
+main {
+  @apply max-w-5xl mx-auto px-5 md:px-6 py-8 md:py-10;
+}
+
+.card {
+  @apply bg-surface border border-border rounded-card shadow-soft backdrop-blur-sm;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center w-full rounded-xl border border-primary bg-gradient-to-br from-primaryHover to-primary text-white font-extrabold px-4 py-3 shadow-[0_12px_28px_rgba(15,118,110,0.28)] transition-transform duration-150 ease-out;
+}
+
+.btn-primary:hover {
+  @apply -translate-y-px bg-primary shadow-[0_12px_22px_rgba(17,94,89,0.25)];
+}
+
+.btn-primary:disabled {
+  @apply opacity-65 cursor-not-allowed shadow-none translate-y-0;
+}
+
+.btn-muted {
+  @apply inline-flex items-center justify-center rounded-xl border border-border bg-gradient-to-br from-base to-surface text-secondary font-bold px-4 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.05)] transition-transform duration-150 ease-out;
+}
+
+.btn-muted:hover {
+  @apply -translate-y-px shadow-[0_8px_18px_rgba(15,23,42,0.08)] bg-surface;
+}
+
+.btn-muted:active {
+  @apply translate-y-0 shadow-[0_4px_10px_rgba(15,23,42,0.05)];
+}
+
+input, select {
+  @apply w-full rounded-xl border border-border bg-white text-text px-3 py-3 outline-none transition duration-150 ease-out;
+}
+
+input:focus, select:focus {
+  @apply ring-2 border-primary ring-[color:rgba(34,197,94,0.35)];
+}
+
+label {
+  @apply text-sm font-semibold text-textMuted;
+}
+
+small {
+  @apply text-sm text-textMuted;
+}

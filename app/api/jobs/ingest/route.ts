@@ -1,0 +1,178 @@
+﻿import { NextRequest, NextResponse } from "next/server";
+import { supabaseServer } from "../../../../lib/supabase/server";
+import crypto from "crypto";
+
+type RawRecord = Record<string, unknown>;
+
+type ParsedFact = {
+  hazard: string;
+  product_category?: string | null;
+  product_text?: string | null;
+  origin_country?: string | null;
+  notifying_country?: string | null;
+  alert_date?: string | null;
+  link?: string | null;
+};
+
+const RASFF_URL =
+  "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
+
+const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "2");
+
+// Case-insensitive field getter
+function pick(record: RawRecord, candidates: string[]): unknown {
+  const lookup: Record<string, unknown> = {};
+  Object.keys(record).forEach((k) => {
+    lookup[k.toLowerCase()] = record[k];
+  });
+  for (const key of candidates) {
+    const hit = lookup[key.toLowerCase()];
+    if (hit !== undefined && hit !== null) return hit;
+  }
+  return undefined;
+}
+
+function hashToUUID(input: string): string {
+  const hex = crypto.createHash("sha256").update(input).digest("hex").slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function deriveSourceId(record: RawRecord): string {
+  const id = pick(record, ["id", "notif_id", "notification_reference", "referenceNumber"]);
+  if (id) return String(id);
+  const pieces = [
+    pick(record, ["notification_reference", "referenceNumber"]),
+    pick(record, ["notification_type_desc", "notificationType"]),
+    pick(record, ["product_category_desc", "productCategory"]),
+    pick(record, ["origin_country_desc", "country"]),
+  ];
+  return crypto.createHash("sha1").update(JSON.stringify(pieces)).digest("hex");
+}
+
+function extractHazards(record: RawRecord): string[] {
+  const candidates: string[] = [];
+  const hazardFields = [
+    pick(record, ["hazard_category_name", "hazard_desc", "hazard"]),
+    pick(record, ["hazards", "hazard_categories", "hazardCategory", "hazardName"]),
+  ];
+
+  hazardFields.forEach((field) => {
+    if (!field) return;
+    if (Array.isArray(field)) {
+      field.forEach((item) => {
+        if (typeof item === "string") candidates.push(item);
+        else if ((item as Record<string, unknown>)?.["name"]) candidates.push(String((item as Record<string, unknown>)["name"]));
+      });
+    } else if (typeof field === "string") {
+      field
+        .split(/[;,/|]/)
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .forEach((v) => candidates.push(v));
+    }
+  });
+
+  const cleaned = Array.from(
+    new Set(
+      candidates
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .map((v) => v.replace(/\s+/g, " "))
+        .map((v) => v.replace(/^["']|["']$/g, "")) // drop surrounding quotes
+        .map((v) => {
+          const lower = v.toLowerCase();
+          // light normalization of common synonyms
+          if (lower.includes("salmonella")) return "Salmonella";
+          if (lower.includes("listeria")) return "Listeria";
+          if (lower.includes("mycotoxin")) return "Mycotoxin";
+          if (lower.includes("aflatoxin")) return "Aflatoxin";
+          if (lower.includes("escherichia") || lower.includes("e.coli") || lower.includes("e coli")) return "E. coli";
+          if (lower.includes("allergen")) return "Allergen";
+          return v[0] ? v[0].toUpperCase() + v.slice(1) : v;
+        })
+    )
+  );
+
+  return cleaned.length > 0 ? cleaned : ["Unknown"];
+}
+
+function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
+  return {
+    product_category:
+      (pick(record, ["product_category_desc", "productCategory", "product_category"]) as string) || null,
+    product_text:
+      (pick(record, ["product_name", "product", "productText", "productDescription"]) as string) || null,
+    origin_country:
+      (pick(record, ["origin_country_desc", "originCountry", "countryOfOrigin", "country"]) as string) ||
+      null,
+    notifying_country:
+      (pick(record, ["notifying_country_desc", "notifyingCountry", "notifying_member"]) as string) || null,
+    alert_date:
+      (pick(record, ["notif_date", "publishedAt", "alertDate", "date"]) as string) ||
+      null,
+    link: (pick(record, ["link", "url", "notification_reference"]) as string) || null,
+  };
+}
+
+export async function POST(req: NextRequest) {
+  const secret = req.headers.get("x-cron-secret");
+  if (!secret || secret !== process.env.CRON_INGEST_SECRET) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const sb = supabaseServer();
+  let nextUrl: string | null = RASFF_URL;
+  let page = 0;
+  let insertedFacts = 0;
+
+  while (nextUrl && page < PAGE_LIMIT) {
+    page += 1;
+    const res = await fetch(nextUrl);
+    if (!res.ok) {
+      console.error("RASFF fetch failed", res.status, await res.text());
+      break;
+    }
+
+    const json = await res.json();
+    const records: RawRecord[] = json.value || json.records || [];
+    nextUrl = json["@odata.nextLink"] || json.nextLink || null;
+
+    for (const record of records) {
+      console.log("Ingesting record keys", Object.keys(record));
+      const sourceId = deriveSourceId(record);
+      const payload = {
+        id: hashToUUID(sourceId),
+        source_id: sourceId,
+        payload_json: record,
+        published_at: record.publishedAt || record.alertDate || record.date || null,
+      };
+
+      const { data: rawRow, error: rawErr } = await sb
+        .from("alerts_raw")
+        .upsert(payload, { onConflict: "source_id" })
+        .select("id")
+        .single();
+
+      if (rawErr || !rawRow) {
+        console.error("alerts_raw error", rawErr);
+        continue;
+      }
+
+      const hazards = extractHazards(record);
+      const common = parseFact(record);
+
+      const factRows = hazards.map((hazard, idx) => ({
+        id: hashToUUID(`${payload.source_id}-${hazard}-${idx}`),
+        raw_id: rawRow.id,
+        hazard,
+        ...common,
+      }));
+
+      const { error: factErr } = await sb.from("alerts_fact").upsert(factRows, { onConflict: "id" });
+      if (factErr) console.error("alerts_fact error", factErr);
+      else insertedFacts += factRows.length;
+    }
+  }
+
+  return NextResponse.json({ ok: true, pagesProcessed: page, factsUpserted: insertedFacts });
+}
