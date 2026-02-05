@@ -20,7 +20,7 @@ npm install
 NEXT_PUBLIC_SUPABASE_URL=your-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-CRON_INGEST_SECRET=choose-a-strong-secret
+CRON_DIGEST_SECRET=<run npm run generate:digest-secret>
 INGEST_PAGE_LIMIT=2
 ```
 
@@ -43,10 +43,12 @@ Visit http://localhost:3000
 - Adjust hazards/categories/countries and save.
 - To test unsubscribe: GET `/api/unsubscribe?token=...` using the same manage token.
 
-6) Trigger the ingest job locally (uses CRON secret header):
+6) Trigger the ingest job locally (uses CRON digest header):
 ```bash
+npm run ingest:local
+# Or manually:
 curl -X POST http://localhost:3000/api/jobs/ingest \
-  -H "X-CRON-SECRET:$CRON_INGEST_SECRET"
+  -H "X-CRON-DIGEST:$CRON_DIGEST_SECRET"
 ```
 - For a quick parser demo without hitting the upstream API:
 ```bash
@@ -55,14 +57,14 @@ curl http://localhost:3000/api/jobs/ingest/debug
 
 ## Vercel deployment tips
 - Add env vars in Vercel Project Settings → Environment Variables (same keys as above).
-- Add `CRON_INGEST_SECRET` and keep it secret; match it in any external caller.
+- Add `CRON_DIGEST_SECRET` (generate with `npm run generate:digest-secret`) and keep it secret; match it in any external caller.
 - Include `vercel.json` in the repo to schedule the daily ingest hitting `/api/jobs/ingest`.
 
 ## Troubleshooting
 - **Missing env vars:** API routes will throw if Supabase keys are absent. Double-check `.env.local` or Vercel env.
 - **Token expired:** Verify tokens last 24h. Re-submit the form to get a new one.
 - **RLS errors:** Service role bypasses RLS; if using anon key directly, ensure user is authenticated (policies require `auth.uid()` matches `user_id`).
-- **Ingest API fails:** Check `CRON_INGEST_SECRET` header and network access to the RASFF endpoint. Adjust `INGEST_PAGE_LIMIT` to stay safe during tests.
+- **Ingest API fails:** Check `CRON_DIGEST_SECRET` header (`X-CRON-DIGEST`) and network access to the RASFF endpoint. Adjust `INGEST_PAGE_LIMIT` to stay safe during tests.
 
 ## Architecture notes
 - No auth UI; magic links via `email_tokens` tables simulate access for now.

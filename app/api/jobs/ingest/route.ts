@@ -115,8 +115,8 @@ function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
 }
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret");
-  if (!secret || secret !== process.env.CRON_INGEST_SECRET) {
+  const secret = req.headers.get("x-cron-digest");
+  if (!secret || secret !== process.env.CRON_DIGEST_SECRET) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
 
   while (nextUrl && page < PAGE_LIMIT) {
     page += 1;
-    const res = await fetch(nextUrl);
+    const res: Response = await fetch(nextUrl);
     if (!res.ok) {
       console.error("RASFF fetch failed", res.status, await res.text());
       break;
