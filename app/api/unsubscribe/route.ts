@@ -9,12 +9,16 @@ export async function GET(req: NextRequest) {
   const sb = supabaseServer();
   const { data: tokenRow, error } = await sb
     .from("email_tokens")
-    .select("user_id, purpose")
+    .select("user_id, purpose, expires_at")
     .eq("token", token)
     .single();
 
   if (error || !tokenRow || tokenRow.purpose !== "manage") {
     return NextResponse.json({ message: "Invalid token" }, { status: 400 });
+  }
+
+  if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
+    return NextResponse.json({ message: "Token expired" }, { status: 400 });
   }
 
   await sb.from("users").update({ status: "unsubscribed" }).eq("id", tokenRow.user_id);

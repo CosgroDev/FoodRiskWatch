@@ -62,67 +62,94 @@ async function ensureDefaultFilter(sb: ReturnType<typeof supabaseServer>, subscr
 }
 
 export async function GET(req: NextRequest) {
-  const sb = supabaseServer();
-  const url = new URL(req.url);
-  const token = url.searchParams.get("token") || undefined;
+  try {
+    const sb = supabaseServer();
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token") || undefined;
 
-  const validation = await validateManageToken(sb, token);
-  if ("error" in validation) {
-    return NextResponse.json({ message: validation.error }, { status: 400 });
+    const validation = await validateManageToken(sb, token);
+    if ("error" in validation) {
+      return NextResponse.json({ message: validation.error }, { status: 400 });
+    }
+
+    const subscription = await ensureDefaultSubscription(sb, validation.userId);
+    const filter = await ensureDefaultFilter(sb, subscription.id);
+
+    const { data: rules } = await sb
+      .from("filter_rules")
+      .select("rule_type, rule_value")
+      .eq("filter_id", filter.id);
+
+    const response = {
+      frequency: (subscription.frequency as "weekly" | "daily" | "instant") || "weekly",
+      hazards: (rules || []).filter((r) => r.rule_type === "hazard").map((r) => r.rule_value),
+      categories: (rules || []).filter((r) => r.rule_type === "category").map((r) => r.rule_value),
+      countries: (rules || []).filter((r) => r.rule_type === "country").map((r) => r.rule_value),
+    };
+
+    return NextResponse.json(response);
+  } catch (err) {
+    console.error("preferences GET error", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
+}
 
-  const subscription = await ensureDefaultSubscription(sb, validation.userId);
-  const filter = await ensureDefaultFilter(sb, subscription.id);
-
-  const { data: rules } = await sb
-    .from("filter_rules")
-    .select("rule_type, rule_value")
-    .eq("filter_id", filter.id);
-
-  const response = {
-    frequency: (subscription.frequency as "weekly" | "daily" | "instant") || "weekly",
-    hazards: (rules || []).filter((r) => r.rule_type === "hazard").map((r) => r.rule_value),
-    categories: (rules || []).filter((r) => r.rule_type === "category").map((r) => r.rule_value),
-    countries: (rules || []).filter((r) => r.rule_type === "country").map((r) => r.rule_value),
-  };
-
-  return NextResponse.json(response);
+// Sanitize filter values: only allow non-empty strings, limit length
+function sanitizeFilterArray(arr: unknown, maxItems = 50, maxLength = 100): string[] {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .slice(0, maxItems)
+    .map((v) => v.trim().slice(0, maxLength));
 }
 
 export async function POST(req: NextRequest) {
-  const sb = supabaseServer();
-  const body = (await req.json().catch(() => ({}))) as RulePayload;
-  const validation = await validateManageToken(sb, body.token);
-  if ("error" in validation) {
-    return NextResponse.json({ message: validation.error }, { status: 400 });
-  }
-
-  const safeFrequency: "weekly" | "daily" | "instant" = body.frequency === "weekly" ? "weekly" : "weekly";
-
-  const subscription = await ensureDefaultSubscription(sb, validation.userId);
-  await sb
-    .from("subscriptions")
-    .update({ frequency: safeFrequency, is_active: true })
-    .eq("id", subscription.id);
-
-  const filter = await ensureDefaultFilter(sb, subscription.id);
-
-  // Replace existing rules with new set
-  await sb.from("filter_rules").delete().eq("filter_id", filter.id);
-
-  const rulesToInsert = [
-    ...(body.hazards || []).map((value) => ({ filter_id: filter.id, rule_type: "hazard", rule_value: value })),
-    ...(body.categories || []).map((value) => ({ filter_id: filter.id, rule_type: "category", rule_value: value })),
-    ...(body.countries || []).map((value) => ({ filter_id: filter.id, rule_type: "country", rule_value: value })),
-  ];
-
-  if (rulesToInsert.length > 0) {
-    const { error } = await sb.from("filter_rules").insert(rulesToInsert);
-    if (error) {
-      console.error("rules insert error", error);
-      return NextResponse.json({ message: "Failed to save filters" }, { status: 500 });
+  try {
+    const sb = supabaseServer();
+    const body = (await req.json().catch(() => ({}))) as RulePayload;
+    const validation = await validateManageToken(sb, body.token);
+    if ("error" in validation) {
+      return NextResponse.json({ message: validation.error }, { status: 400 });
     }
-  }
 
-  return NextResponse.json({ ok: true });
+    const validFrequencies = ["weekly", "daily", "instant"] as const;
+    const safeFrequency = validFrequencies.includes(body.frequency as typeof validFrequencies[number])
+      ? (body.frequency as "weekly" | "daily" | "instant")
+      : "weekly";
+
+    // Sanitize input arrays
+    const hazards = sanitizeFilterArray(body.hazards);
+    const categories = sanitizeFilterArray(body.categories);
+    const countries = sanitizeFilterArray(body.countries);
+
+    const subscription = await ensureDefaultSubscription(sb, validation.userId);
+    await sb
+      .from("subscriptions")
+      .update({ frequency: safeFrequency, is_active: true })
+      .eq("id", subscription.id);
+
+    const filter = await ensureDefaultFilter(sb, subscription.id);
+
+    // Replace existing rules with new set
+    await sb.from("filter_rules").delete().eq("filter_id", filter.id);
+
+    const rulesToInsert = [
+      ...hazards.map((value) => ({ filter_id: filter.id, rule_type: "hazard", rule_value: value })),
+      ...categories.map((value) => ({ filter_id: filter.id, rule_type: "category", rule_value: value })),
+      ...countries.map((value) => ({ filter_id: filter.id, rule_type: "country", rule_value: value })),
+    ];
+
+    if (rulesToInsert.length > 0) {
+      const { error } = await sb.from("filter_rules").insert(rulesToInsert);
+      if (error) {
+        console.error("rules insert error", error);
+        return NextResponse.json({ message: "Failed to save filters" }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("preferences POST error", err);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

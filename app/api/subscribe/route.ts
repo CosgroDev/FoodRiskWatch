@@ -14,15 +14,29 @@ export async function POST(req: NextRequest) {
 
   const sb = supabaseServer();
 
-  const { data: userRow, error: userErr } = await sb
+  // Check if user already exists
+  const { data: existingUser } = await sb
     .from("users")
-    .upsert({ email, status: "pending" }, { onConflict: "email" })
     .select("id, status")
-    .single();
+    .eq("email", email)
+    .maybeSingle();
 
-  if (userErr || !userRow) {
-    console.error("subscribe upsert error", userErr);
-    return NextResponse.json({ message: "Database error" }, { status: 500 });
+  let userRow: { id: string; status: string };
+
+  if (existingUser) {
+    userRow = existingUser;
+  } else {
+    const { data: newUser, error: insertErr } = await sb
+      .from("users")
+      .insert({ email, status: "pending" })
+      .select("id, status")
+      .single();
+
+    if (insertErr || !newUser) {
+      console.error("subscribe insert error", insertErr);
+      return NextResponse.json({ message: "Database error" }, { status: 500 });
+    }
+    userRow = newUser;
   }
 
   const verifyToken = crypto.randomBytes(24).toString("base64url");
