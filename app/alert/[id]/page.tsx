@@ -7,6 +7,29 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
+const RASFF_API_URL = "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view";
+
+// Fetch alert from RASFF API by notification reference
+async function fetchFromRasffApi(notificationRef: string): Promise<Record<string, unknown> | null> {
+  try {
+    // Try to fetch by notification reference filter
+    const url = `${RASFF_API_URL}?format=json&api-version=v1.0&$filter=notification_reference eq '${notificationRef}'`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const records = json.value || json.records || [];
+
+    if (records.length > 0) {
+      return records[0];
+    }
+    return null;
+  } catch (err) {
+    console.error("RASFF API fetch error:", err);
+    return null;
+  }
+}
+
 // Helper to format dates nicely
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "Unknown";
@@ -47,57 +70,63 @@ function getHazardStyle(category: string): { bg: string; text: string } {
 export default async function AlertDetailPage({ params }: Params) {
   const { id } = await params;
 
-  let sb;
-  try {
-    sb = supabaseServer();
-  } catch {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Database not configured</p>
-      </div>
-    );
-  }
-
-  // Try fact ID first
   let rawPayload: Record<string, unknown> | null = null;
   let sourceId: string | null = null;
 
-  const { data: factData } = await sb
-    .from("alerts_fact")
-    .select("*, alerts_raw(payload_json, source_id)")
-    .eq("id", id)
-    .maybeSingle();
+  // Try database first if configured
+  let sb;
+  try {
+    sb = supabaseServer();
 
-  if (factData?.alerts_raw) {
-    rawPayload = factData.alerts_raw.payload_json;
-    sourceId = factData.alerts_raw.source_id;
-  }
-
-  // Try raw ID if not found
-  if (!rawPayload) {
-    const { data: rawData } = await sb
-      .from("alerts_raw")
-      .select("*")
+    // Try fact ID first
+    const { data: factData } = await sb
+      .from("alerts_fact")
+      .select("*, alerts_raw(payload_json, source_id)")
       .eq("id", id)
       .maybeSingle();
 
-    if (rawData) {
-      rawPayload = rawData.payload_json;
-      sourceId = rawData.source_id;
+    if (factData?.alerts_raw) {
+      rawPayload = factData.alerts_raw.payload_json;
+      sourceId = factData.alerts_raw.source_id;
     }
+
+    // Try raw ID if not found
+    if (!rawPayload) {
+      const { data: rawData } = await sb
+        .from("alerts_raw")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (rawData) {
+        rawPayload = rawData.payload_json;
+        sourceId = rawData.source_id;
+      }
+    }
+
+    // Try source_id (notification reference)
+    if (!rawPayload) {
+      const { data: sourceData } = await sb
+        .from("alerts_raw")
+        .select("*")
+        .eq("source_id", id)
+        .maybeSingle();
+
+      if (sourceData) {
+        rawPayload = sourceData.payload_json;
+        sourceId = sourceData.source_id;
+      }
+    }
+  } catch {
+    // Database not configured, will try API fallback
   }
 
-  // Try source_id (notification reference)
+  // Fallback: Try fetching from RASFF API directly (for preview/non-ingested data)
   if (!rawPayload) {
-    const { data: sourceData } = await sb
-      .from("alerts_raw")
-      .select("*")
-      .eq("source_id", id)
-      .maybeSingle();
-
-    if (sourceData) {
-      rawPayload = sourceData.payload_json;
-      sourceId = sourceData.source_id;
+    const apiData = await fetchFromRasffApi(id);
+    if (apiData) {
+      rawPayload = apiData;
+      sourceId = id;
     }
   }
 
