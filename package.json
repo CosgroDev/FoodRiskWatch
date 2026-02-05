@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "ingest:local": "curl -X POST http://127.0.0.1:3000/api/jobs/ingest -H \"X-CRON-DIGEST:$CRON_DIGEST_SECRET\"",
+    "digest:local": "curl -X POST http://127.0.0.1:3000/api/jobs/digest -H \"X-CRON-DIGEST:$CRON_DIGEST_SECRET\"",
     "generate:digest-secret": "node -e \"console.log(require('crypto').randomBytes(32).toString('base64url'))\""
   },
   "dependencies": {
