@@ -1,4 +1,5 @@
 export type AlertItem = {
+  id?: string | null; // Alert ID for local detail page link
   hazard: string;
   hazard_category?: string | null;
   product_category: string | null;
@@ -6,7 +7,7 @@ export type AlertItem = {
   origin_country: string | null;
   notifying_country: string | null;
   alert_date: string | null;
-  link: string | null;
+  link?: string | null; // Legacy external link (optional)
   risk_level?: string | null;
 };
 
@@ -66,6 +67,7 @@ export type DigestEmailData = {
   dateRange: { start: string; end: string };
   manageUrl: string;
   unsubscribeUrl: string;
+  baseUrl?: string; // Base URL for building alert detail links
 };
 
 function formatDate(dateStr: string | null): string {
@@ -91,13 +93,17 @@ function escapeHtml(str: string | null | undefined): string {
 }
 
 export function renderDigestEmail(data: DigestEmailData): string {
-  const { alerts, dateRange, manageUrl, unsubscribeUrl } = data;
+  const { alerts, dateRange, manageUrl, unsubscribeUrl, baseUrl } = data;
 
   const alertRows = alerts
     .map((alert) => {
       const badgeStyle = getHazardBadgeStyle(alert.hazard_category);
       const riskBadge = getRiskBadge(alert.risk_level);
       const categoryLabel = alert.hazard_category ? ` (${escapeHtml(alert.hazard_category)})` : "";
+      // Build detail link - prefer local detail page if we have an ID
+      const detailLink = alert.id && baseUrl
+        ? `${baseUrl}/alert/${encodeURIComponent(alert.id)}`
+        : alert.link;
 
       return `
       <tr>
@@ -122,7 +128,7 @@ export function renderDigestEmail(data: DigestEmailData): string {
                 </p>
                 <p style="margin: 8px 0 0 0; font-size: 12px; color: #94a3b8;">
                   ${formatDate(alert.alert_date)}
-                  ${alert.link ? ` &bull; <a href="${escapeHtml(alert.link)}" style="color: #0d9488; text-decoration: none;">View details &rarr;</a>` : ""}
+                  ${detailLink ? ` &bull; <a href="${escapeHtml(detailLink)}" style="color: #0d9488; text-decoration: none;">View details &rarr;</a>` : ""}
                 </p>
               </td>
             </tr>

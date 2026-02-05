@@ -12,12 +12,14 @@ type FilterRule = {
 type AlertFact = {
   id: string;
   hazard: string | null;
+  hazard_category: string | null;
   product_category: string | null;
   product_text: string | null;
   origin_country: string | null;
   notifying_country: string | null;
   alert_date: string | null;
   link: string | null;
+  risk_level: string | null;
 };
 
 // Validate manage token and get user info
@@ -99,7 +101,7 @@ async function getMatchingAlerts(
 
   let query = sb
     .from("alerts_fact")
-    .select("id, hazard, product_category, product_text, origin_country, notifying_country, alert_date, link")
+    .select("id, hazard, hazard_category, product_category, product_text, origin_country, notifying_country, alert_date, link, risk_level")
     .gte("alert_date", thirtyDaysAgo)
     .order("alert_date", { ascending: false })
     .limit(limit * 3); // Fetch more to filter down
@@ -155,13 +157,15 @@ async function getMatchingAlerts(
 
   // Convert to AlertItem format
   return filteredAlerts.slice(0, limit).map((alert: AlertFact) => ({
+    id: alert.id, // For local detail page links
     hazard: alert.hazard || "Unknown",
+    hazard_category: alert.hazard_category,
     product_category: alert.product_category,
     product_text: alert.product_text,
     origin_country: alert.origin_country,
     notifying_country: alert.notifying_country,
     alert_date: alert.alert_date,
-    link: alert.link,
+    risk_level: alert.risk_level,
   }));
 }
 
@@ -242,6 +246,7 @@ export async function GET(req: NextRequest) {
     },
     manageUrl: `${url.origin}/preferences?token=${token}`,
     unsubscribeUrl: `${url.origin}/api/unsubscribe?token=${token}`,
+    baseUrl: url.origin, // For building local alert detail links
   });
 
   return new NextResponse(html, {

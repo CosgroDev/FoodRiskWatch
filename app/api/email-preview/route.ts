@@ -28,8 +28,12 @@ function parseRasffRecord(record: RawRecord): AlertItem[] {
   const rawHazard = pick(record, ["hazard_category_name", "hazard_desc", "hazard"]);
   const hazards = autoCleanHazards(rawHazard);
 
+  // Get notification reference for linking to detail page
+  const notificationRef = pick(record, ["notification_reference", "referenceNumber"]);
+
   // Create one AlertItem per hazard with fully cleaned data
   return hazards.map((hazard) => ({
+    id: notificationRef || null, // Use notification ref as ID for detail page link
     hazard: hazard.name,
     hazard_category: hazard.category,
     product_category: cleaned.productCategory,
@@ -37,7 +41,6 @@ function parseRasffRecord(record: RawRecord): AlertItem[] {
     origin_country: cleaned.originCountry,
     notifying_country: cleaned.notifyingCountry,
     alert_date: cleaned.alertDate,
-    link: cleaned.link,
     risk_level: cleaned.riskLevel,
   }));
 }
@@ -65,6 +68,7 @@ async function fetchRasffAlerts(limit: number = 10): Promise<AlertItem[]> {
 // Sample alerts for offline/fallback testing
 const sampleAlerts: AlertItem[] = [
   {
+    id: "2024.0001",
     hazard: "Salmonella",
     hazard_category: "Pathogen",
     product_category: "Poultry",
@@ -72,10 +76,10 @@ const sampleAlerts: AlertItem[] = [
     origin_country: "Poland",
     notifying_country: "Germany",
     alert_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0001",
     risk_level: "serious",
   },
   {
+    id: "2024.0002",
     hazard: "Listeria",
     hazard_category: "Pathogen",
     product_category: "Dairy",
@@ -83,10 +87,10 @@ const sampleAlerts: AlertItem[] = [
     origin_country: "France",
     notifying_country: "Belgium",
     alert_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0002",
     risk_level: "serious",
   },
   {
+    id: "2024.0003",
     hazard: "Aflatoxin",
     hazard_category: "Mycotoxin",
     product_category: "Nuts & Seeds",
@@ -94,10 +98,10 @@ const sampleAlerts: AlertItem[] = [
     origin_country: "Egypt",
     notifying_country: "Netherlands",
     alert_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0003",
     risk_level: "potentially-serious",
   },
   {
+    id: "2024.0004",
     hazard: "E. coli (STEC)",
     hazard_category: "Pathogen",
     product_category: "Fruits & Vegetables",
@@ -105,10 +109,10 @@ const sampleAlerts: AlertItem[] = [
     origin_country: "Spain",
     notifying_country: "UK",
     alert_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    link: null,
     risk_level: "serious",
   },
   {
+    id: "2024.0005",
     hazard: "Undeclared Allergen (Milk)",
     hazard_category: "Allergen",
     product_category: "Cereals & Bakery",
@@ -116,7 +120,6 @@ const sampleAlerts: AlertItem[] = [
     origin_country: "Italy",
     notifying_country: "France",
     alert_date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0005",
     risk_level: "not-serious",
   },
 ];
@@ -166,6 +169,7 @@ export async function GET(req: NextRequest) {
     },
     manageUrl: `${url.origin}/preferences?token=preview-token`,
     unsubscribeUrl: `${url.origin}/api/unsubscribe?token=preview-token`,
+    baseUrl: url.origin, // For building local alert detail links
   });
 
   return new NextResponse(html, {
