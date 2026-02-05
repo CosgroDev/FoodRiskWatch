@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderDigestEmail, type AlertItem } from "../../../lib/email/digest-template";
-import { normalizeRasffRecord, pickField } from "../../../lib/normalizer";
+import { autoCleanRecord, autoCleanHazards } from "../../../lib/normalizer-auto";
 
 export const dynamic = "force-dynamic";
 
@@ -9,27 +9,36 @@ type RawRecord = Record<string, unknown>;
 const RASFF_URL =
   "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
 
-// Parse a raw RASFF record into AlertItem(s) using the normalizer
+// Helper to get field value case-insensitively
+function pick(record: RawRecord, candidates: string[]): string {
+  for (const key of candidates) {
+    const found = Object.keys(record).find((k) => k.toLowerCase() === key.toLowerCase());
+    if (found && record[found] != null) {
+      return String(record[found]).trim();
+    }
+  }
+  return "";
+}
+
+// Parse a raw RASFF record into AlertItem(s) using auto-normalizer
 function parseRasffRecord(record: RawRecord): AlertItem[] {
-  const normalized = normalizeRasffRecord(record);
+  const cleaned = autoCleanRecord(record);
 
-  // Build link - prefer existing link, or construct from notification reference
-  const link = (pickField(record, ["link", "url"]) as string) ||
-    (normalized.notificationRef
-      ? `https://webgate.ec.europa.eu/rasff-window/screen/notification/${normalized.notificationRef}`
-      : null);
+  // Extract and clean hazards (may contain multiple *** separated)
+  const rawHazard = pick(record, ["hazard_category_name", "hazard_desc", "hazard"]);
+  const hazards = autoCleanHazards(rawHazard);
 
-  // Create one AlertItem per hazard with normalized data
-  return normalized.hazards.map((hazard) => ({
+  // Create one AlertItem per hazard with fully cleaned data
+  return hazards.map((hazard) => ({
     hazard: hazard.name,
     hazard_category: hazard.category,
-    product_category: normalized.productCategory,
-    product_text: normalized.productName,
-    origin_country: normalized.originCountry,
-    notifying_country: normalized.notifyingCountry,
-    alert_date: normalized.alertDate?.toISOString() || null,
-    link,
-    risk_level: normalized.riskLevel,
+    product_category: cleaned.productCategory,
+    product_text: cleaned.productText,
+    origin_country: cleaned.originCountry,
+    notifying_country: cleaned.notifyingCountry,
+    alert_date: cleaned.alertDate,
+    link: cleaned.link,
+    risk_level: cleaned.riskLevel,
   }));
 }
 

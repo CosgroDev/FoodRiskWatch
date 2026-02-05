@@ -1,11 +1,10 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
 import crypto from "crypto";
 import {
-  normalizeRasffRecord,
-  pickField,
-  type NormalizedAlert,
-} from "../../../../lib/normalizer";
+  autoCleanRecord,
+  autoCleanHazards,
+} from "../../../../lib/normalizer-auto";
 
 type RawRecord = Record<string, unknown>;
 
@@ -56,25 +55,6 @@ function deriveSourceId(record: RawRecord): string {
   return crypto.createHash("sha1").update(JSON.stringify(pieces)).digest("hex");
 }
 
-// Convert normalized alert to fact row format
-function normalizedToFacts(normalized: NormalizedAlert, record: RawRecord): Omit<ParsedFact, "hazard">[] {
-  const link = (pickField(record, ["link", "url"]) as string) ||
-    (normalized.notificationRef ? `https://webgate.ec.europa.eu/rasff-window/screen/notification/${normalized.notificationRef}` : null);
-
-  const base = {
-    product_category: normalized.productCategory,
-    product_text: normalized.productName,
-    origin_country: normalized.originCountry,
-    notifying_country: normalized.notifyingCountry,
-    alert_date: normalized.alertDate?.toISOString() || null,
-    link,
-    // Additional normalized fields for richer data
-    risk_level: normalized.riskLevel,
-    hazard_category: normalized.hazardCategory,
-  };
-
-  return [base];
-}
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-cron-secret");
@@ -121,17 +101,26 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Use comprehensive normalizer for cleaner data
-      const normalized = normalizeRasffRecord(record);
-      const common = normalizedToFacts(normalized, record)[0];
+      // Auto-clean the record with pattern-based normalization
+      const cleaned = autoCleanRecord(record);
+
+      // Extract hazards from raw field (may contain multiple *** separated)
+      const rawHazard = pick(record, ["hazard_category_name", "hazard_desc", "hazard"]) as string || "";
+      const hazards = autoCleanHazards(rawHazard);
 
       // Create one row per hazard for filtering
-      const factRows = normalized.hazards.map((hazard, idx) => ({
+      const factRows = hazards.map((hazard, idx) => ({
         id: hashToUUID(`${payload.source_id}-${hazard.name}-${idx}`),
         raw_id: rawRow.id,
         hazard: hazard.name,
         hazard_category: hazard.category,
-        ...common,
+        product_category: cleaned.productCategory,
+        product_text: cleaned.productText,
+        origin_country: cleaned.originCountry,
+        notifying_country: cleaned.notifyingCountry,
+        alert_date: cleaned.alertDate,
+        link: cleaned.link,
+        risk_level: cleaned.riskLevel,
       }));
 
       const { error: factErr } = await sb.from("alerts_fact").upsert(factRows, { onConflict: "id" });
