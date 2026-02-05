@@ -1,9 +1,21 @@
 /**
  * RASFF Data Normalizer
  * Transforms raw RASFF API data into clean, human-readable format
+ *
+ * This is the base normalizer with hardcoded rules.
+ * For adaptive/database-driven normalization, see normalizer-adaptive.ts
  */
 
 type RawRecord = Record<string, unknown>;
+
+// Re-export adaptive normalizer functions for convenience
+export {
+  getCustomMapping,
+  trackUnknownValue,
+  fuzzyMatch,
+  addMapping,
+  getNormalizationStats,
+} from "./normalizer-adaptive";
 
 // ============================================================================
 // UTF-8 Encoding Fixes
