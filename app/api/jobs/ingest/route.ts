@@ -127,13 +127,14 @@ export async function POST(req: NextRequest) {
 
   while (nextUrl && page < PAGE_LIMIT) {
     page += 1;
-    const res = await fetch(nextUrl);
-    if (!res.ok) {
-      console.error("RASFF fetch failed", res.status, await res.text());
+    const fetchUrl: string = nextUrl;
+    const fetchRes = await fetch(fetchUrl);
+    if (!fetchRes.ok) {
+      console.error("RASFF fetch failed", fetchRes.status, await fetchRes.text());
       break;
     }
 
-    const json = await res.json();
+    const json = await fetchRes.json();
     const records: RawRecord[] = json.value || json.records || [];
     nextUrl = json["@odata.nextLink"] || json.nextLink || null;
 
