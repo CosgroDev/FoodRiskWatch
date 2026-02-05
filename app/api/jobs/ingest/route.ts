@@ -115,8 +115,15 @@ function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
 }
 
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-digest");
-  if (!secret || secret !== process.env.CRON_DIGEST_SECRET) {
+  // Support both custom header (local testing) and Vercel's cron auth
+  const customSecret = req.headers.get("x-cron-digest");
+  const authHeader = req.headers.get("authorization");
+  const vercelSecret = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  const isValidCustom = customSecret && customSecret === process.env.CRON_DIGEST_SECRET;
+  const isValidVercel = vercelSecret && vercelSecret === process.env.CRON_SECRET;
+
+  if (!isValidCustom && !isValidVercel) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
