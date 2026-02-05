@@ -114,7 +114,7 @@ function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
   };
 }
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   // Support both custom header (local testing) and Vercel's cron auth
   const customSecret = req.headers.get("x-cron-digest");
   const authHeader = req.headers.get("authorization");
