@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderDigestEmail, type AlertItem } from "../../../lib/email/digest-template";
+import { normalizeRasffRecord, pickField } from "../../../lib/normalizer";
 
 export const dynamic = "force-dynamic";
 
@@ -8,88 +9,27 @@ type RawRecord = Record<string, unknown>;
 const RASFF_URL =
   "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
 
-// Case-insensitive field getter (same as ingest route)
-function pick(record: RawRecord, candidates: string[]): unknown {
-  const lookup: Record<string, unknown> = {};
-  Object.keys(record).forEach((k) => {
-    lookup[k.toLowerCase()] = record[k];
-  });
-  for (const key of candidates) {
-    const hit = lookup[key.toLowerCase()];
-    if (hit !== undefined && hit !== null) return hit;
-  }
-  return undefined;
-}
-
-// Extract hazards (same logic as ingest route)
-function extractHazards(record: RawRecord): string[] {
-  const candidates: string[] = [];
-  const hazardFields = [
-    pick(record, ["hazard_category_name", "hazard_desc", "hazard"]),
-    pick(record, ["hazards", "hazard_categories", "hazardCategory", "hazardName"]),
-  ];
-
-  hazardFields.forEach((field) => {
-    if (!field) return;
-    if (Array.isArray(field)) {
-      field.forEach((item) => {
-        if (typeof item === "string") candidates.push(item);
-        else if ((item as Record<string, unknown>)?.["name"])
-          candidates.push(String((item as Record<string, unknown>)["name"]));
-      });
-    } else if (typeof field === "string") {
-      field
-        .split(/[;,/|]/)
-        .map((v) => v.trim())
-        .filter(Boolean)
-        .forEach((v) => candidates.push(v));
-    }
-  });
-
-  const cleaned = Array.from(
-    new Set(
-      candidates
-        .map((v) => v.trim())
-        .filter(Boolean)
-        .map((v) => v.replace(/\s+/g, " "))
-        .map((v) => v.replace(/^["']|["']$/g, ""))
-        .map((v) => {
-          const lower = v.toLowerCase();
-          if (lower.includes("salmonella")) return "Salmonella";
-          if (lower.includes("listeria")) return "Listeria";
-          if (lower.includes("mycotoxin")) return "Mycotoxin";
-          if (lower.includes("aflatoxin")) return "Aflatoxin";
-          if (lower.includes("escherichia") || lower.includes("e.coli") || lower.includes("e coli"))
-            return "E. coli";
-          if (lower.includes("allergen")) return "Allergen";
-          return v[0] ? v[0].toUpperCase() + v.slice(1) : v;
-        })
-    )
-  );
-
-  return cleaned.length > 0 ? cleaned : ["Unknown"];
-}
-
-// Parse a raw RASFF record into AlertItem(s)
+// Parse a raw RASFF record into AlertItem(s) using the normalizer
 function parseRasffRecord(record: RawRecord): AlertItem[] {
-  const hazards = extractHazards(record);
-  const common = {
-    product_category:
-      (pick(record, ["product_category_desc", "productCategory", "product_category"]) as string) || null,
-    product_text:
-      (pick(record, ["product_name", "product", "productText", "productDescription"]) as string) || null,
-    origin_country:
-      (pick(record, ["origin_country_desc", "originCountry", "countryOfOrigin", "country"]) as string) || null,
-    notifying_country:
-      (pick(record, ["notifying_country_desc", "notifyingCountry", "notifying_member"]) as string) || null,
-    alert_date: (pick(record, ["notif_date", "publishedAt", "alertDate", "date"]) as string) || null,
-    link: (pick(record, ["link", "url"]) as string) || null,
-  };
+  const normalized = normalizeRasffRecord(record);
 
-  // Create one AlertItem per hazard
-  return hazards.map((hazard) => ({
-    hazard,
-    ...common,
+  // Build link - prefer existing link, or construct from notification reference
+  const link = (pickField(record, ["link", "url"]) as string) ||
+    (normalized.notificationRef
+      ? `https://webgate.ec.europa.eu/rasff-window/screen/notification/${normalized.notificationRef}`
+      : null);
+
+  // Create one AlertItem per hazard with normalized data
+  return normalized.hazards.map((hazard) => ({
+    hazard: hazard.name,
+    hazard_category: hazard.category,
+    product_category: normalized.productCategory,
+    product_text: normalized.productName,
+    origin_country: normalized.originCountry,
+    notifying_country: normalized.notifyingCountry,
+    alert_date: normalized.alertDate?.toISOString() || null,
+    link,
+    risk_level: normalized.riskLevel,
   }));
 }
 
@@ -117,48 +57,58 @@ async function fetchRasffAlerts(limit: number = 10): Promise<AlertItem[]> {
 const sampleAlerts: AlertItem[] = [
   {
     hazard: "Salmonella",
-    product_category: "Meat and meat products",
-    product_text: "Frozen chicken breast fillets",
+    hazard_category: "Pathogen",
+    product_category: "Poultry",
+    product_text: "Frozen Chicken Breast Fillets",
     origin_country: "Poland",
     notifying_country: "Germany",
     alert_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://example.com/alert/1",
+    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0001",
+    risk_level: "serious",
   },
   {
-    hazard: "Listeria monocytogenes",
-    product_category: "Dairy products",
-    product_text: "Soft cheese (Brie style)",
+    hazard: "Listeria",
+    hazard_category: "Pathogen",
+    product_category: "Dairy",
+    product_text: "Soft Cheese (Brie Style)",
     origin_country: "France",
     notifying_country: "Belgium",
     alert_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://example.com/alert/2",
+    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0002",
+    risk_level: "serious",
   },
   {
-    hazard: "Aflatoxins",
-    product_category: "Nuts and seeds",
-    product_text: "Roasted peanuts in shell",
+    hazard: "Aflatoxin",
+    hazard_category: "Mycotoxin",
+    product_category: "Nuts & Seeds",
+    product_text: "Roasted Peanuts In Shell",
     origin_country: "Egypt",
     notifying_country: "Netherlands",
     alert_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://example.com/alert/3",
+    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0003",
+    risk_level: "potentially-serious",
   },
   {
     hazard: "E. coli (STEC)",
-    product_category: "Produce",
-    product_text: "Fresh spinach leaves (pre-packed)",
+    hazard_category: "Pathogen",
+    product_category: "Fruits & Vegetables",
+    product_text: "Fresh Spinach Leaves (Pre-packed)",
     origin_country: "Spain",
-    notifying_country: "United Kingdom",
+    notifying_country: "UK",
     alert_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     link: null,
+    risk_level: "serious",
   },
   {
-    hazard: "Undeclared allergen (milk)",
-    product_category: "Bakery products",
-    product_text: "Chocolate chip cookies",
+    hazard: "Undeclared Allergen (Milk)",
+    hazard_category: "Allergen",
+    product_category: "Cereals & Bakery",
+    product_text: "Chocolate Chip Cookies",
     origin_country: "Italy",
     notifying_country: "France",
     alert_date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "https://example.com/alert/5",
+    link: "https://webgate.ec.europa.eu/rasff-window/screen/notification/2024.0005",
+    risk_level: "not-serious",
   },
 ];
 

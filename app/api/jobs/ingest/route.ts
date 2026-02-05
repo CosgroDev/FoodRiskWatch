@@ -1,6 +1,11 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
 import crypto from "crypto";
+import {
+  normalizeRasffRecord,
+  pickField,
+  type NormalizedAlert,
+} from "../../../../lib/normalizer";
 
 type RawRecord = Record<string, unknown>;
 
@@ -12,6 +17,8 @@ type ParsedFact = {
   notifying_country?: string | null;
   alert_date?: string | null;
   link?: string | null;
+  risk_level?: string | null;
+  hazard_category?: string | null;
 };
 
 const RASFF_URL =
@@ -49,69 +56,24 @@ function deriveSourceId(record: RawRecord): string {
   return crypto.createHash("sha1").update(JSON.stringify(pieces)).digest("hex");
 }
 
-function extractHazards(record: RawRecord): string[] {
-  const candidates: string[] = [];
-  const hazardFields = [
-    pick(record, ["hazard_category_name", "hazard_desc", "hazard"]),
-    pick(record, ["hazards", "hazard_categories", "hazardCategory", "hazardName"]),
-  ];
+// Convert normalized alert to fact row format
+function normalizedToFacts(normalized: NormalizedAlert, record: RawRecord): Omit<ParsedFact, "hazard">[] {
+  const link = (pickField(record, ["link", "url"]) as string) ||
+    (normalized.notificationRef ? `https://webgate.ec.europa.eu/rasff-window/screen/notification/${normalized.notificationRef}` : null);
 
-  hazardFields.forEach((field) => {
-    if (!field) return;
-    if (Array.isArray(field)) {
-      field.forEach((item) => {
-        if (typeof item === "string") candidates.push(item);
-        else if ((item as Record<string, unknown>)?.["name"]) candidates.push(String((item as Record<string, unknown>)["name"]));
-      });
-    } else if (typeof field === "string") {
-      field
-        .split(/[;,/|]/)
-        .map((v) => v.trim())
-        .filter(Boolean)
-        .forEach((v) => candidates.push(v));
-    }
-  });
-
-  const cleaned = Array.from(
-    new Set(
-      candidates
-        .map((v) => v.trim())
-        .filter(Boolean)
-        .map((v) => v.replace(/\s+/g, " "))
-        .map((v) => v.replace(/^["']|["']$/g, "")) // drop surrounding quotes
-        .map((v) => {
-          const lower = v.toLowerCase();
-          // light normalization of common synonyms
-          if (lower.includes("salmonella")) return "Salmonella";
-          if (lower.includes("listeria")) return "Listeria";
-          if (lower.includes("mycotoxin")) return "Mycotoxin";
-          if (lower.includes("aflatoxin")) return "Aflatoxin";
-          if (lower.includes("escherichia") || lower.includes("e.coli") || lower.includes("e coli")) return "E. coli";
-          if (lower.includes("allergen")) return "Allergen";
-          return v[0] ? v[0].toUpperCase() + v.slice(1) : v;
-        })
-    )
-  );
-
-  return cleaned.length > 0 ? cleaned : ["Unknown"];
-}
-
-function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
-  return {
-    product_category:
-      (pick(record, ["product_category_desc", "productCategory", "product_category"]) as string) || null,
-    product_text:
-      (pick(record, ["product_name", "product", "productText", "productDescription"]) as string) || null,
-    origin_country:
-      (pick(record, ["origin_country_desc", "originCountry", "countryOfOrigin", "country"]) as string) ||
-      null,
-    notifying_country:
-      (pick(record, ["notifying_country_desc", "notifyingCountry", "notifying_member"]) as string) || null,
-    alert_date:
-      (pick(record, ["notif_date", "publishedAt", "alertDate", "date"]) as string) ||
-      null,
-    link: (pick(record, ["link", "url", "notification_reference"]) as string) || null,
+  const base = {
+    product_category: normalized.productCategory,
+    product_text: normalized.productName,
+    origin_country: normalized.originCountry,
+    notifying_country: normalized.notifyingCountry,
+    alert_date: normalized.alertDate?.toISOString() || null,
+    link,
+    // Additional normalized fields for richer data
+    risk_level: normalized.riskLevel,
+    hazard_category: normalized.hazardCategory,
   };
+
+  return [base];
 }
 
 export async function POST(req: NextRequest) {
@@ -159,13 +121,16 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const hazards = extractHazards(record);
-      const common = parseFact(record);
+      // Use comprehensive normalizer for cleaner data
+      const normalized = normalizeRasffRecord(record);
+      const common = normalizedToFacts(normalized, record)[0];
 
-      const factRows = hazards.map((hazard, idx) => ({
-        id: hashToUUID(`${payload.source_id}-${hazard}-${idx}`),
+      // Create one row per hazard for filtering
+      const factRows = normalized.hazards.map((hazard, idx) => ({
+        id: hashToUUID(`${payload.source_id}-${hazard.name}-${idx}`),
         raw_id: rawRow.id,
-        hazard,
+        hazard: hazard.name,
+        hazard_category: hazard.category,
         ...common,
       }));
 

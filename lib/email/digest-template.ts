@@ -1,12 +1,64 @@
 export type AlertItem = {
   hazard: string;
+  hazard_category?: string | null;
   product_category: string | null;
   product_text: string | null;
   origin_country: string | null;
   notifying_country: string | null;
   alert_date: string | null;
   link: string | null;
+  risk_level?: string | null;
 };
+
+// Get badge color based on hazard category
+function getHazardBadgeStyle(category: string | null | undefined): { bg: string; color: string } {
+  const cat = (category || "").toLowerCase();
+  // Red - Highest concern
+  if (cat.includes("pathogen") || cat === "serious") {
+    return { bg: "#fef2f2", color: "#dc2626" };
+  }
+  // Orange - Biological/toxin concerns
+  if (cat.includes("mycotoxin") || cat.includes("toxin") || cat.includes("allergen")) {
+    return { bg: "#fff7ed", color: "#ea580c" };
+  }
+  // Yellow - Chemical concerns
+  if (cat.includes("pesticide") || cat.includes("heavy metal") || cat.includes("pollutant") || cat.includes("contaminant")) {
+    return { bg: "#fefce8", color: "#ca8a04" };
+  }
+  // Purple - Fraud/adulteration
+  if (cat.includes("fraud") || cat.includes("novel")) {
+    return { bg: "#faf5ff", color: "#9333ea" };
+  }
+  // Blue - Quality/labelling issues
+  if (cat.includes("label") || cat.includes("packaging") || cat.includes("quality")) {
+    return { bg: "#eff6ff", color: "#2563eb" };
+  }
+  // Default gray
+  return { bg: "#f1f5f9", color: "#475569" };
+}
+
+// Get risk level badge
+function getRiskBadge(riskLevel: string | null | undefined): string {
+  if (!riskLevel) return "";
+  const level = riskLevel.toLowerCase();
+  let style = { bg: "#f1f5f9", color: "#475569", label: "Unknown" };
+
+  if (level === "serious") {
+    style = { bg: "#fef2f2", color: "#dc2626", label: "Serious" };
+  } else if (level.includes("potential")) {
+    style = { bg: "#fff7ed", color: "#ea580c", label: "Potential Risk" };
+  } else if (level === "not-serious") {
+    style = { bg: "#eff6ff", color: "#2563eb", label: "Not Serious" };
+  } else if (level === "no-risk") {
+    style = { bg: "#f0fdf4", color: "#16a34a", label: "No Risk" };
+  } else if (level === "undecided") {
+    style = { bg: "#f1f5f9", color: "#475569", label: "Under Review" };
+  } else {
+    return "";
+  }
+
+  return `<span style="display: inline-block; background: ${style.bg}; color: ${style.color}; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 6px;">${style.label}</span>`;
+}
 
 export type DigestEmailData = {
   recipientEmail: string;
@@ -42,16 +94,20 @@ export function renderDigestEmail(data: DigestEmailData): string {
   const { alerts, dateRange, manageUrl, unsubscribeUrl } = data;
 
   const alertRows = alerts
-    .map(
-      (alert) => `
+    .map((alert) => {
+      const badgeStyle = getHazardBadgeStyle(alert.hazard_category);
+      const riskBadge = getRiskBadge(alert.risk_level);
+      const categoryLabel = alert.hazard_category ? ` (${escapeHtml(alert.hazard_category)})` : "";
+
+      return `
       <tr>
         <td style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <span style="display: inline-block; background: #fef2f2; color: #dc2626; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 8px;">
-                  ${escapeHtml(alert.hazard)}
-                </span>
+                <span style="display: inline-block; background: ${badgeStyle.bg}; color: ${badgeStyle.color}; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-bottom: 8px;">
+                  ${escapeHtml(alert.hazard)}${categoryLabel}
+                </span>${riskBadge}
               </td>
             </tr>
             <tr>
@@ -66,14 +122,14 @@ export function renderDigestEmail(data: DigestEmailData): string {
                 </p>
                 <p style="margin: 8px 0 0 0; font-size: 12px; color: #94a3b8;">
                   ${formatDate(alert.alert_date)}
-                  ${alert.link ? ` &bull; <a href="${escapeHtml(alert.link)}" style="color: #0d9488; text-decoration: none;">View details</a>` : ""}
+                  ${alert.link ? ` &bull; <a href="${escapeHtml(alert.link)}" style="color: #0d9488; text-decoration: none;">View details &rarr;</a>` : ""}
                 </p>
               </td>
             </tr>
           </table>
         </td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
 
   return `
