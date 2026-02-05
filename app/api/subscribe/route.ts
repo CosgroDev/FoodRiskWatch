@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/server";
+import { sendVerificationEmail } from "../../../lib/email/send";
 import crypto from "crypto";
 
 const EMAIL_REGEX = /.+@.+\..+/;
@@ -54,5 +55,20 @@ export async function POST(req: NextRequest) {
   const verifyUrl = `${origin}/verify?token=${verifyToken}`;
   const manageUrl = `${origin}/preferences?token=${manageToken}`;
 
-  return NextResponse.json({ verifyUrl, manageUrl });
+  // Send verification email
+  const emailResult = await sendVerificationEmail(email, verifyUrl);
+  if (!emailResult.success) {
+    console.error("Failed to send verification email:", emailResult.error);
+    // Still return success - email sending failure shouldn't block signup
+    // The URLs are returned for manual testing
+  }
+
+  return NextResponse.json({
+    message: emailResult.success
+      ? "Check your email to verify your subscription"
+      : "Subscription created. Check your email (or use the URLs below for testing)",
+    verifyUrl,
+    manageUrl,
+    emailSent: emailResult.success,
+  });
 }

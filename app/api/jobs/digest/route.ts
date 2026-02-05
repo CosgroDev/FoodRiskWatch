@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
+import { sendDigestEmail } from "../../../../lib/email/send";
 
 type Subscription = {
   id: string;
@@ -160,21 +161,50 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // TODO: Send actual email here
-    // For now, just log and mark as sent
-    console.log(`[Digest] Would send ${newAlerts.length} alerts to ${subscription.users?.email}`);
+    // Get user's manage token for unsubscribe/preferences links
+    const { data: manageTokenData } = await sb
+      .from("email_tokens")
+      .select("token")
+      .eq("user_id", subscription.user_id)
+      .eq("purpose", "manage")
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .single();
 
-    // Mark delivery as sent
-    await sb
-      .from("deliveries")
-      .update({ status: "sent", sent_at: new Date().toISOString() })
-      .eq("id", delivery.id);
+    const manageToken = manageTokenData?.token;
+    if (!manageToken) {
+      console.error(`[Digest] No manage token for user ${subscription.user_id}`);
+      await sb.from("deliveries").update({ status: "failed" }).eq("id", delivery.id);
+      continue;
+    }
 
-    results.push({
-      email: subscription.users?.email || "unknown",
-      alertCount: newAlerts.length,
-      deliveryId: delivery.id,
-    });
+    // Send actual email
+    const emailResult = await sendDigestEmail(
+      subscription.users?.email || "",
+      newAlerts,
+      manageToken
+    );
+
+    if (emailResult.success) {
+      // Mark delivery as sent
+      await sb
+        .from("deliveries")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", delivery.id);
+
+      console.log(`[Digest] Sent ${newAlerts.length} alerts to ${subscription.users?.email}`);
+
+      results.push({
+        email: subscription.users?.email || "unknown",
+        alertCount: newAlerts.length,
+        deliveryId: delivery.id,
+      });
+    } else {
+      // Mark delivery as failed
+      await sb.from("deliveries").update({ status: "failed" }).eq("id", delivery.id);
+      console.error(`[Digest] Failed to send to ${subscription.users?.email}: ${emailResult.error}`);
+    }
   }
 
   return NextResponse.json({

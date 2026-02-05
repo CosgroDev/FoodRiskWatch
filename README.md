@@ -22,6 +22,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 CRON_DIGEST_SECRET=<run npm run generate:digest-secret>
 INGEST_PAGE_LIMIT=2
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM=FoodRisk Watch <alerts@yourdomain.com>
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
 ```
 
 3) Apply database schema in Supabase SQL editor (paste and run):
@@ -79,5 +82,6 @@ curl -X POST http://localhost:3000/api/jobs/digest \
 ## Architecture notes
 - No auth UI; magic links via `email_tokens` tables simulate access for now.
 - Ingestion is idempotent: raw alerts keyed by `source_id`, facts keyed by `raw_id + hazard` hash.
-- Emails are **not** sent yet; API returns the verification/manage URLs for manual testing.
+- Emails are sent via Resend (verification on signup, weekly digest via cron job).
+- Email templates include verification emails and HTML digest emails with alert details.
 
