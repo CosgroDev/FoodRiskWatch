@@ -79,11 +79,27 @@ export async function GET(req: NextRequest) {
     .select("rule_type, rule_value")
     .eq("filter_id", filter.id);
 
+  // Fetch distinct values from alerts_fact for dynamic options
+  const [hazardsResult, categoriesResult, countriesResult] = await Promise.all([
+    sb.from("alerts_fact").select("hazard").not("hazard", "is", null),
+    sb.from("alerts_fact").select("product_category").not("product_category", "is", null),
+    sb.from("alerts_fact").select("origin_country").not("origin_country", "is", null),
+  ]);
+
+  // Extract unique values and sort alphabetically
+  const availableHazards = Array.from(new Set((hazardsResult.data || []).map((r) => r.hazard as string))).sort();
+  const availableCategories = Array.from(new Set((categoriesResult.data || []).map((r) => r.product_category as string))).sort();
+  const availableCountries = Array.from(new Set((countriesResult.data || []).map((r) => r.origin_country as string))).sort();
+
   const response = {
     frequency: (subscription.frequency as "weekly" | "daily" | "instant") || "weekly",
     hazards: (rules || []).filter((r) => r.rule_type === "hazard").map((r) => r.rule_value),
     categories: (rules || []).filter((r) => r.rule_type === "category").map((r) => r.rule_value),
     countries: (rules || []).filter((r) => r.rule_type === "country").map((r) => r.rule_value),
+    // Available options from ingested data
+    availableHazards,
+    availableCategories,
+    availableCountries,
   };
 
   return NextResponse.json(response);

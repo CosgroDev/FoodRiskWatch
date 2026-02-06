@@ -3,15 +3,14 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-const hazardOptions = ["Salmonella", "Listeria", "E.coli", "Mycotoxin", "Allergen", "Physical contaminant"];
-const categoryOptions = ["Meat", "Dairy", "Produce", "Seafood", "Bakery", "Beverages"];
-const countryOptions = ["Belgium", "France", "Germany", "Italy", "Netherlands", "Spain", "United Kingdom"];
-
 type PrefsResponse = {
   frequency: "weekly" | "daily" | "instant";
   hazards: string[];
   categories: string[];
   countries: string[];
+  availableHazards: string[];
+  availableCategories: string[];
+  availableCountries: string[];
 };
 
 function OptionPills({
@@ -82,6 +81,11 @@ function PreferencesContent() {
   const [categories, setCategories] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
 
+  // Dynamic options from the database
+  const [availableHazards, setAvailableHazards] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+
   const showAll = hazards.length === 0 && categories.length === 0 && countries.length === 0;
 
   const toggleShowAll = () => {
@@ -107,6 +111,10 @@ function PreferencesContent() {
         setHazards(data.hazards || []);
         setCategories(data.categories || []);
         setCountries(data.countries || []);
+        // Set available options from the database
+        setAvailableHazards(data.availableHazards || []);
+        setAvailableCategories(data.availableCategories || []);
+        setAvailableCountries(data.availableCountries || []);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Unexpected error"))
       .finally(() => setLoading(false));
@@ -191,13 +199,22 @@ function PreferencesContent() {
 
       <div className={`grid gap-3 md:grid-cols-3 ${showAll ? "opacity-50 pointer-events-none" : ""}`}>
         <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Hazards" options={hazardOptions} values={hazards} onChange={setHazards} />
+          <OptionPills label="Hazards" options={availableHazards} values={hazards} onChange={setHazards} />
+          {availableHazards.length === 0 && !loading && (
+            <p className="text-xs text-muted mt-2">No hazard data available yet. Run the ingest job to populate options.</p>
+          )}
         </div>
         <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Product categories" options={categoryOptions} values={categories} onChange={setCategories} />
+          <OptionPills label="Product categories" options={availableCategories} values={categories} onChange={setCategories} />
+          {availableCategories.length === 0 && !loading && (
+            <p className="text-xs text-muted mt-2">No category data available yet. Run the ingest job to populate options.</p>
+          )}
         </div>
         <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Countries" options={countryOptions} values={countries} onChange={setCountries} />
+          <OptionPills label="Countries" options={availableCountries} values={countries} onChange={setCountries} />
+          {availableCountries.length === 0 && !loading && (
+            <p className="text-xs text-muted mt-2">No country data available yet. Run the ingest job to populate options.</p>
+          )}
         </div>
       </div>
 
