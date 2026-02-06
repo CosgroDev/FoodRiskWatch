@@ -15,11 +15,20 @@ type ParsedFact = {
   link?: string | null;
 };
 
-const RASFF_URL =
-  "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
+const RASFF_BASE_URL =
+  "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view";
+
+// Build URL with date filter to get recent alerts
+function buildRasffUrl(): string {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const dateFrom = thirtyDaysAgo.toISOString().split("T")[0]; // YYYY-MM-DD format
+
+  return `${RASFF_BASE_URL}?format=json&api-version=v1.0&NOTIF_DATE_FROM=${dateFrom}`;
+}
 
 // Reduced page limit to ensure job completes within timeout
-const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "5");
+const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "10");
 
 // Case-insensitive field getter
 function pick(record: RawRecord, candidates: string[]): unknown {
@@ -137,7 +146,7 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = supabaseServer();
-  let nextUrl: string | null = RASFF_URL;
+  let nextUrl: string | null = buildRasffUrl();
   let page = 0;
   let insertedFacts = 0;
 
