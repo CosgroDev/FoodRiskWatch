@@ -69,6 +69,8 @@ function deriveSourceId(record: RawRecord): string {
 
 function extractHazards(record: RawRecord): string[] {
   const candidates: string[] = [];
+
+  // Check traditional hazard fields first
   const hazardFields = [
     pick(record, ["hazard_category_name", "hazard_desc", "hazard"]),
     pick(record, ["hazards", "hazard_categories", "hazardCategory", "hazardName"]),
@@ -89,6 +91,15 @@ function extractHazards(record: RawRecord): string[] {
         .forEach((v) => candidates.push(v));
     }
   });
+
+  // If no hazards found, try to extract from NOTIF_SUBJECT
+  if (candidates.length === 0) {
+    const subject = pick(record, ["NOTIF_SUBJECT", "notif_subject", "subject", "title"]) as string | undefined;
+    if (subject) {
+      // The subject often contains the hazard info, pass the whole thing to normalizeHazard
+      candidates.push(subject);
+    }
+  }
 
   // Clean up and normalize hazards
   const cleaned = Array.from(
