@@ -25,6 +25,39 @@ function InfoRow({ label, value }: { label: string; value: string | null }) {
   );
 }
 
+function ExpandableJson({ data }: { data: Record<string, unknown> | null }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!data) return null;
+
+  return (
+    <div className="bg-base border border-border rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition"
+      >
+        <h2 className="font-semibold text-lg">Raw Data (JSON)</h2>
+        <svg
+          className={`w-5 h-5 text-muted transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {expanded && (
+        <div className="border-t border-border p-4 bg-slate-50">
+          <pre className="text-xs overflow-x-auto whitespace-pre-wrap break-words text-secondary">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AlertDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -111,25 +144,7 @@ export default function AlertDetailPage() {
         </dl>
       </div>
 
-      {alert.link && (
-        <div className="bg-base border border-border rounded-xl p-4">
-          <h2 className="font-semibold text-lg mb-3">Official Source</h2>
-          <p className="text-muted text-sm mb-3">
-            View the official notification on the RASFF portal for complete details.
-          </p>
-          <a
-            href={alert.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            View on RASFF Portal
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        </div>
-      )}
+      <ExpandableJson data={alert.raw_payload} />
 
       <div className="pt-4 border-t border-border">
         <a href="/" className="text-primary hover:text-primaryHover font-medium">
