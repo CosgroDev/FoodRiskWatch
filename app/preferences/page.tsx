@@ -96,14 +96,6 @@ function PreferencesContent() {
   // Dynamic options from the database
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
-  const showAll = categories.length === 0;
-
-  const toggleShowAll = () => {
-    if (!showAll) {
-      setCategories([]);
-    }
-  };
-
   useEffect(() => {
     if (!token) return;
     setLoading(true);
@@ -174,32 +166,6 @@ function PreferencesContent() {
       {message && <p className="text-green-700">{message}</p>}
 
       <div className="p-4 bg-base border border-border rounded-xl shadow-soft">
-        <button
-          type="button"
-          onClick={toggleShowAll}
-          className={`flex items-center gap-3 w-full text-left ${showAll ? "" : "opacity-70"}`}
-        >
-          <span
-            className={`flex items-center justify-center w-6 h-6 rounded-md border-2 transition ${
-              showAll
-                ? "bg-primary border-primary text-white"
-                : "border-border bg-surface"
-            }`}
-          >
-            {showAll && (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </span>
-          <div>
-            <span className="font-semibold">Show all alerts</span>
-            <p className="text-sm text-muted">Receive all food safety alerts without filtering</p>
-          </div>
-        </button>
-      </div>
-
-      <div className={`p-4 bg-base border border-border rounded-xl shadow-soft ${showAll ? "opacity-50 pointer-events-none" : ""}`}>
         <OptionPills label="Product Categories" options={availableCategories} values={categories} onChange={setCategories} />
         {availableCategories.length === 0 && !loading && (
           <p className="text-xs text-muted mt-2">No category data available yet.</p>
