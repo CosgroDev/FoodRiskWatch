@@ -88,6 +88,22 @@ function extractHazards(record: RawRecord): string[] {
   return cleaned.length > 0 ? cleaned : ["Unknown"];
 }
 
+function buildRasffLink(record: RawRecord): string | null {
+  // First check for an explicit URL
+  const explicitLink = pick(record, ["link", "url"]) as string | undefined;
+  if (explicitLink && explicitLink.startsWith("http")) {
+    return explicitLink;
+  }
+
+  // Build link from notification reference
+  const notifRef = pick(record, ["notification_reference", "notif_id", "referenceNumber"]) as string | undefined;
+  if (notifRef) {
+    return `https://webgate.ec.europa.eu/rasff-window/screen/notification/${encodeURIComponent(notifRef)}`;
+  }
+
+  return null;
+}
+
 function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
   const rawCategory = pick(record, ["product_category_desc", "productCategory", "product_category"]) as string | undefined;
   const rawOriginCountry = pick(record, ["origin_country_desc", "originCountry", "countryOfOrigin", "country"]) as string | undefined;
@@ -102,7 +118,7 @@ function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
     alert_date:
       (pick(record, ["notif_date", "publishedAt", "alertDate", "date"]) as string) ||
       null,
-    link: (pick(record, ["link", "url", "notification_reference"]) as string) || null,
+    link: buildRasffLink(record),
   };
 }
 
