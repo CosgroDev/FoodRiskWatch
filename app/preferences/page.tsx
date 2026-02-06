@@ -82,6 +82,17 @@ function PreferencesContent() {
   const [categories, setCategories] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
 
+  const showAll = hazards.length === 0 && categories.length === 0 && countries.length === 0;
+
+  const toggleShowAll = () => {
+    if (!showAll) {
+      // Clear all filters to enable "show all"
+      setHazards([]);
+      setCategories([]);
+      setCountries([]);
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
     setLoading(true);
@@ -152,7 +163,33 @@ function PreferencesContent() {
       {error && <p className="text-red-600">{error}</p>}
       {message && <p className="text-green-700">{message}</p>}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="p-4 bg-base border border-border rounded-xl shadow-soft">
+        <button
+          type="button"
+          onClick={toggleShowAll}
+          className={`flex items-center gap-3 w-full text-left ${showAll ? "" : "opacity-70"}`}
+        >
+          <span
+            className={`flex items-center justify-center w-6 h-6 rounded-md border-2 transition ${
+              showAll
+                ? "bg-primary border-primary text-white"
+                : "border-border bg-surface"
+            }`}
+          >
+            {showAll && (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </span>
+          <div>
+            <span className="font-semibold">Show all alerts</span>
+            <p className="text-sm text-muted">Receive all food safety alerts without filtering</p>
+          </div>
+        </button>
+      </div>
+
+      <div className={`grid gap-3 md:grid-cols-3 ${showAll ? "opacity-50 pointer-events-none" : ""}`}>
         <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
           <OptionPills label="Hazards" options={hazardOptions} values={hazards} onChange={setHazards} />
         </div>

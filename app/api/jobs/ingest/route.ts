@@ -17,7 +17,7 @@ type ParsedFact = {
 const RASFF_URL =
   "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
 
-const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "2");
+const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "50");
 
 // Case-insensitive field getter
 function pick(record: RawRecord, candidates: string[]): unknown {
