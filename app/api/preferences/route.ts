@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/server";
+import { normalizeHazard, normalizeCategory, normalizeCountry } from "../../../lib/normalize";
 
 type RulePayload = {
   token?: string;
@@ -86,10 +87,30 @@ export async function GET(req: NextRequest) {
     sb.from("alerts_fact").select("origin_country").not("origin_country", "is", null),
   ]);
 
-  // Extract unique values and sort alphabetically
-  const availableHazards = Array.from(new Set((hazardsResult.data || []).map((r) => r.hazard as string))).sort();
-  const availableCategories = Array.from(new Set((categoriesResult.data || []).map((r) => r.product_category as string))).sort();
-  const availableCountries = Array.from(new Set((countriesResult.data || []).map((r) => r.origin_country as string))).sort();
+  // Extract values, normalize them, filter out nulls/duplicates, and sort alphabetically
+  const availableHazards = Array.from(
+    new Set(
+      (hazardsResult.data || [])
+        .map((r) => normalizeHazard(r.hazard as string))
+        .filter((v): v is string => v !== null && v !== "Other" && v !== "Unknown")
+    )
+  ).sort();
+
+  const availableCategories = Array.from(
+    new Set(
+      (categoriesResult.data || [])
+        .map((r) => normalizeCategory(r.product_category as string))
+        .filter((v): v is string => v !== null && v !== "Other")
+    )
+  ).sort();
+
+  const availableCountries = Array.from(
+    new Set(
+      (countriesResult.data || [])
+        .map((r) => normalizeCountry(r.origin_country as string))
+        .filter((v): v is string => v !== null && v !== "Unknown")
+    )
+  ).sort();
 
   const response = {
     frequency: (subscription.frequency as "weekly" | "daily" | "instant") || "weekly",

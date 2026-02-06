@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
 import { sendDigestEmail } from "../../../../lib/email/send";
+import { normalizeHazard, normalizeCategory, normalizeCountry } from "../../../../lib/normalize";
 
 type Subscription = {
   id: string;
@@ -77,34 +78,45 @@ export async function GET(req: NextRequest) {
       rules = ruleData || [];
     }
 
-    // Build filter criteria
-    const hazards = rules.filter((r) => r.rule_type === "hazard").map((r) => r.rule_value);
-    const categories = rules.filter((r) => r.rule_type === "category").map((r) => r.rule_value);
-    const countries = rules.filter((r) => r.rule_type === "country").map((r) => r.rule_value);
+    // Build filter criteria (these are normalized values saved by the user)
+    const hazardFilters = new Set(rules.filter((r) => r.rule_type === "hazard").map((r) => r.rule_value));
+    const categoryFilters = new Set(rules.filter((r) => r.rule_type === "category").map((r) => r.rule_value));
+    const countryFilters = new Set(rules.filter((r) => r.rule_type === "country").map((r) => r.rule_value));
 
-    // Get alerts from the last 7 days that match filters
+    // Get alerts from the last 7 days
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    let alertQuery = sb
+    const { data: allAlerts } = await sb
       .from("alerts_fact")
       .select("id, hazard, product_category, origin_country, product_text, alert_date, link")
-      .gte("alert_date", oneWeekAgo.toISOString());
+      .gte("alert_date", oneWeekAgo.toISOString())
+      .returns<AlertFact[]>();
 
-    // Apply filters if user has set any
-    if (hazards.length > 0) {
-      alertQuery = alertQuery.in("hazard", hazards);
-    }
-    if (categories.length > 0) {
-      alertQuery = alertQuery.in("product_category", categories);
-    }
-    if (countries.length > 0) {
-      alertQuery = alertQuery.in("origin_country", countries);
+    if (!allAlerts || allAlerts.length === 0) {
+      continue;
     }
 
-    const { data: alerts } = await alertQuery.returns<AlertFact[]>();
+    // Filter alerts by matching normalized values against user's preferences
+    // If no filters set, include all alerts (user selected "Show All")
+    const hasFilters = hazardFilters.size > 0 || categoryFilters.size > 0 || countryFilters.size > 0;
 
-    if (!alerts || alerts.length === 0) {
+    const alerts = hasFilters
+      ? allAlerts.filter((alert) => {
+          const normalizedHazard = normalizeHazard(alert.hazard);
+          const normalizedCategory = normalizeCategory(alert.product_category);
+          const normalizedCountry = normalizeCountry(alert.origin_country);
+
+          // Check if alert matches any of the user's filter criteria
+          const matchesHazard = hazardFilters.size === 0 || (normalizedHazard && hazardFilters.has(normalizedHazard));
+          const matchesCategory = categoryFilters.size === 0 || (normalizedCategory && categoryFilters.has(normalizedCategory));
+          const matchesCountry = countryFilters.size === 0 || (normalizedCountry && countryFilters.has(normalizedCountry));
+
+          return matchesHazard && matchesCategory && matchesCountry;
+        })
+      : allAlerts;
+
+    if (alerts.length === 0) {
       continue;
     }
 
