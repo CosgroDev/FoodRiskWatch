@@ -15,8 +15,25 @@ type ParsedFact = {
   link?: string | null;
 };
 
-const RASFF_URL =
-  "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
+const RASFF_BASE_URL =
+  "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view";
+
+// Build URL with sorting by newest first and optional date filter
+function buildRasffUrl(): string {
+  const params = new URLSearchParams({
+    "format": "json",
+    "api-version": "v1.0",
+    "$orderby": "notif_date desc", // Newest alerts first
+  });
+
+  // Only fetch alerts from the last 30 days to avoid processing old data
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const dateFilter = thirtyDaysAgo.toISOString().split("T")[0];
+  params.append("$filter", `notif_date ge ${dateFilter}`);
+
+  return `${RASFF_BASE_URL}?${params.toString()}`;
+}
 
 const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "50");
 
@@ -136,7 +153,7 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = supabaseServer();
-  let nextUrl: string | null = RASFF_URL;
+  let nextUrl: string | null = buildRasffUrl();
   let page = 0;
   let insertedFacts = 0;
 
