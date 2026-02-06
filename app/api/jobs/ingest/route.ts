@@ -18,21 +18,15 @@ type ParsedFact = {
 const RASFF_BASE_URL =
   "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view";
 
-// Build URL with sorting by newest first and optional date filter
+// Build URL with sorting by newest first and date filter
 function buildRasffUrl(): string {
-  const params = new URLSearchParams({
-    "format": "json",
-    "api-version": "v1.0",
-    "$orderby": "notif_date desc", // Newest alerts first
-  });
-
   // Only fetch alerts from the last 30 days to avoid processing old data
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateFilter = thirtyDaysAgo.toISOString().split("T")[0];
-  params.append("$filter", `notif_date ge ${dateFilter}`);
 
-  return `${RASFF_BASE_URL}?${params.toString()}`;
+  // Manually construct URL to avoid encoding issues with OData parameters
+  return `${RASFF_BASE_URL}?format=json&api-version=v1.0&$orderby=notif_date desc&$filter=notif_date ge ${dateFilter}`;
 }
 
 const PAGE_LIMIT = Number(process.env.INGEST_PAGE_LIMIT || "50");
