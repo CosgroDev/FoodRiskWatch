@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
 import { sendDigestEmail } from "../../../../lib/email/send";
-import { normalizeHazard, normalizeCategory, normalizeCountry } from "../../../../lib/normalize";
+import { normalizeCategory } from "../../../../lib/normalize";
 
 type Subscription = {
   id: string;
@@ -78,10 +78,8 @@ export async function GET(req: NextRequest) {
       rules = ruleData || [];
     }
 
-    // Build filter criteria (these are normalized values saved by the user)
-    const hazardFilters = new Set(rules.filter((r) => r.rule_type === "hazard").map((r) => r.rule_value));
+    // Build filter criteria (only categories now)
     const categoryFilters = new Set(rules.filter((r) => r.rule_type === "category").map((r) => r.rule_value));
-    const countryFilters = new Set(rules.filter((r) => r.rule_type === "country").map((r) => r.rule_value));
 
     // Get alerts from the last 7 days
     const oneWeekAgo = new Date();
@@ -97,22 +95,11 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    // Filter alerts by matching normalized values against user's preferences
-    // If no filters set, include all alerts (user selected "Show All")
-    const hasFilters = hazardFilters.size > 0 || categoryFilters.size > 0 || countryFilters.size > 0;
-
-    const alerts = hasFilters
+    // Filter alerts by category. If no filters set, include all alerts (user selected "Show All")
+    const alerts = categoryFilters.size > 0
       ? allAlerts.filter((alert) => {
-          const normalizedHazard = normalizeHazard(alert.hazard);
           const normalizedCategory = normalizeCategory(alert.product_category);
-          const normalizedCountry = normalizeCountry(alert.origin_country);
-
-          // Check if alert matches any of the user's filter criteria
-          const matchesHazard = hazardFilters.size === 0 || (normalizedHazard && hazardFilters.has(normalizedHazard));
-          const matchesCategory = categoryFilters.size === 0 || (normalizedCategory && categoryFilters.has(normalizedCategory));
-          const matchesCountry = countryFilters.size === 0 || (normalizedCountry && countryFilters.has(normalizedCountry));
-
-          return matchesHazard && matchesCategory && matchesCountry;
+          return normalizedCategory && categoryFilters.has(normalizedCategory);
         })
       : allAlerts;
 

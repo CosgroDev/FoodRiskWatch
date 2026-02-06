@@ -5,12 +5,8 @@ import { useSearchParams } from "next/navigation";
 
 type PrefsResponse = {
   frequency: "weekly" | "daily" | "instant";
-  hazards: string[];
   categories: string[];
-  countries: string[];
-  availableHazards: string[];
   availableCategories: string[];
-  availableCountries: string[];
 };
 
 function OptionPills({
@@ -39,9 +35,9 @@ function OptionPills({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <label>{label}</label>
+        <label className="font-semibold">{label}</label>
         <div className="flex gap-2">
           {!allSelected && options.length > 0 && (
             <button
@@ -95,23 +91,16 @@ function PreferencesContent() {
   const [message, setMessage] = useState<string | null>(null);
 
   const [frequency, setFrequency] = useState<"weekly" | "daily" | "instant">("weekly");
-  const [hazards, setHazards] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [countries, setCountries] = useState<string[]>([]);
 
   // Dynamic options from the database
-  const [availableHazards, setAvailableHazards] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
 
-  const showAll = hazards.length === 0 && categories.length === 0 && countries.length === 0;
+  const showAll = categories.length === 0;
 
   const toggleShowAll = () => {
     if (!showAll) {
-      // Clear all filters to enable "show all"
-      setHazards([]);
       setCategories([]);
-      setCountries([]);
     }
   };
 
@@ -126,13 +115,8 @@ function PreferencesContent() {
         }
         const data = (await res.json()) as PrefsResponse;
         setFrequency(data.frequency);
-        setHazards(data.hazards || []);
         setCategories(data.categories || []);
-        setCountries(data.countries || []);
-        // Set available options from the database
-        setAvailableHazards(data.availableHazards || []);
         setAvailableCategories(data.availableCategories || []);
-        setAvailableCountries(data.availableCountries || []);
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Unexpected error"))
       .finally(() => setLoading(false));
@@ -149,7 +133,7 @@ function PreferencesContent() {
       const res = await fetch("/api/preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, frequency, hazards, categories, countries }),
+        body: JSON.stringify({ token, frequency, categories }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -179,9 +163,9 @@ function PreferencesContent() {
           <span className="h-2 w-2 rounded-full bg-primary" />
           Manage alerts
         </div>
-        <h1 className="text-2xl font-bold">Your alert filters</h1>
+        <h1 className="text-2xl font-bold">Your alert preferences</h1>
         <p className="text-muted text-sm">
-          Weekly digests are included on the free tier. Daily and instant are previewed for later.
+          Choose which product categories you want to receive alerts for.
         </p>
       </div>
 
@@ -215,30 +199,16 @@ function PreferencesContent() {
         </button>
       </div>
 
-      <div className={`grid gap-3 md:grid-cols-3 ${showAll ? "opacity-50 pointer-events-none" : ""}`}>
-        <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Hazards" options={availableHazards} values={hazards} onChange={setHazards} />
-          {availableHazards.length === 0 && !loading && (
-            <p className="text-xs text-muted mt-2">No hazard data available yet. Run the ingest job to populate options.</p>
-          )}
-        </div>
-        <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Product categories" options={availableCategories} values={categories} onChange={setCategories} />
-          {availableCategories.length === 0 && !loading && (
-            <p className="text-xs text-muted mt-2">No category data available yet. Run the ingest job to populate options.</p>
-          )}
-        </div>
-        <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Countries" options={availableCountries} values={countries} onChange={setCountries} />
-          {availableCountries.length === 0 && !loading && (
-            <p className="text-xs text-muted mt-2">No country data available yet. Run the ingest job to populate options.</p>
-          )}
-        </div>
+      <div className={`p-4 bg-base border border-border rounded-xl shadow-soft ${showAll ? "opacity-50 pointer-events-none" : ""}`}>
+        <OptionPills label="Product Categories" options={availableCategories} values={categories} onChange={setCategories} />
+        {availableCategories.length === 0 && !loading && (
+          <p className="text-xs text-muted mt-2">No category data available yet.</p>
+        )}
       </div>
 
-      <div className="p-3 bg-base border border-border rounded-xl shadow-soft max-w-xs">
+      <div className="p-4 bg-base border border-border rounded-xl shadow-soft max-w-xs">
         <div className="grid gap-2">
-          <label>Frequency</label>
+          <label className="font-semibold">Frequency</label>
           <div className="flex flex-col gap-2">
             {[
               { value: "weekly", label: "Weekly (included)", disabled: false },

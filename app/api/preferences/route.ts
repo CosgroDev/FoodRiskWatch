@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/server";
-import { normalizeHazard, normalizeCategory, normalizeCountry } from "../../../lib/normalize";
+import { normalizeCategory } from "../../../lib/normalize";
 
 type RulePayload = {
   token?: string;
   frequency?: "weekly" | "daily" | "instant";
-  hazards?: string[];
   categories?: string[];
-  countries?: string[];
 };
 
 async function validateManageToken(sb: ReturnType<typeof supabaseServer>, token?: string) {
@@ -80,47 +78,24 @@ export async function GET(req: NextRequest) {
     .select("rule_type, rule_value")
     .eq("filter_id", filter.id);
 
-  // Fetch distinct values from alerts_fact for dynamic options
-  const [hazardsResult, categoriesResult, countriesResult] = await Promise.all([
-    sb.from("alerts_fact").select("hazard").not("hazard", "is", null),
-    sb.from("alerts_fact").select("product_category").not("product_category", "is", null),
-    sb.from("alerts_fact").select("origin_country").not("origin_country", "is", null),
-  ]);
-
-  // Extract values, normalize them, filter out nulls/duplicates, and sort alphabetically
-  const availableHazards = Array.from(
-    new Set(
-      (hazardsResult.data || [])
-        .map((r) => normalizeHazard(r.hazard as string))
-        .filter((v): v is string => v !== null && v !== "Other" && v !== "Unknown")
-    )
-  ).sort();
+  // Fetch distinct categories from alerts_fact
+  const { data: categoriesResult } = await sb
+    .from("alerts_fact")
+    .select("product_category")
+    .not("product_category", "is", null);
 
   const availableCategories = Array.from(
     new Set(
-      (categoriesResult.data || [])
+      (categoriesResult || [])
         .map((r) => normalizeCategory(r.product_category as string))
         .filter((v): v is string => v !== null && v !== "Other")
     )
   ).sort();
 
-  const availableCountries = Array.from(
-    new Set(
-      (countriesResult.data || [])
-        .map((r) => normalizeCountry(r.origin_country as string))
-        .filter((v): v is string => v !== null && v !== "Unknown")
-    )
-  ).sort();
-
   const response = {
     frequency: (subscription.frequency as "weekly" | "daily" | "instant") || "weekly",
-    hazards: (rules || []).filter((r) => r.rule_type === "hazard").map((r) => r.rule_value),
     categories: (rules || []).filter((r) => r.rule_type === "category").map((r) => r.rule_value),
-    countries: (rules || []).filter((r) => r.rule_type === "country").map((r) => r.rule_value),
-    // Available options from ingested data
-    availableHazards,
     availableCategories,
-    availableCountries,
   };
 
   return NextResponse.json(response);
@@ -144,14 +119,14 @@ export async function POST(req: NextRequest) {
 
   const filter = await ensureDefaultFilter(sb, subscription.id);
 
-  // Replace existing rules with new set
+  // Replace existing rules with new set (only categories now)
   await sb.from("filter_rules").delete().eq("filter_id", filter.id);
 
-  const rulesToInsert = [
-    ...(body.hazards || []).map((value) => ({ filter_id: filter.id, rule_type: "hazard", rule_value: value })),
-    ...(body.categories || []).map((value) => ({ filter_id: filter.id, rule_type: "category", rule_value: value })),
-    ...(body.countries || []).map((value) => ({ filter_id: filter.id, rule_type: "country", rule_value: value })),
-  ];
+  const rulesToInsert = (body.categories || []).map((value) => ({
+    filter_id: filter.id,
+    rule_type: "category",
+    rule_value: value,
+  }));
 
   if (rulesToInsert.length > 0) {
     const { error } = await sb.from("filter_rules").insert(rulesToInsert);
