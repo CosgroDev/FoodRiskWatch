@@ -121,7 +121,8 @@ FoodRisk Watch - Keeping you informed about food safety in Europe
 export function digestEmailHtml(
   alerts: Alert[],
   manageUrl: string,
-  unsubscribeUrl: string
+  unsubscribeUrl: string,
+  baseUrl: string
 ): string {
   const alertRows = alerts
     .map((alert) => {
@@ -133,6 +134,8 @@ export function digestEmailHtml(
           })
         : "Unknown date";
 
+      const detailUrl = `${baseUrl}/alerts/${encodeURIComponent(alert.id)}`;
+
       return `
         <tr>
           <td style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
@@ -143,7 +146,7 @@ export function digestEmailHtml(
             <p style="margin: 0 0 8px; font-weight: 500;">${alert.product_text || "No product description"}</p>
             <p style="margin: 0; color: #64748b; font-size: 14px;">
               Origin: ${alert.origin_country || "Unknown"} | ${date}
-              ${alert.link ? ` | <a href="${alert.link}" style="color: #16a34a;">View details</a>` : ""}
+              | <a href="${detailUrl}" style="color: #16a34a;">View details</a>
             </p>
           </td>
         </tr>
@@ -196,18 +199,20 @@ export function digestEmailHtml(
 export function digestEmailText(
   alerts: Alert[],
   manageUrl: string,
-  unsubscribeUrl: string
+  unsubscribeUrl: string,
+  baseUrl: string
 ): string {
   const alertList = alerts
     .map((alert) => {
       const date = alert.alert_date
         ? new Date(alert.alert_date).toLocaleDateString("en-GB")
         : "Unknown date";
+      const detailUrl = `${baseUrl}/alerts/${encodeURIComponent(alert.id)}`;
       return `
 - ${alert.hazard || "Unknown hazard"} | ${alert.product_category || "Unknown category"}
   ${alert.product_text || "No product description"}
   Origin: ${alert.origin_country || "Unknown"} | ${date}
-  ${alert.link ? `Details: ${alert.link}` : ""}
+  Details: ${detailUrl}
       `.trim();
     })
     .join("\n\n");

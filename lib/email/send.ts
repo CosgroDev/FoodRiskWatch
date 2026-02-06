@@ -85,8 +85,8 @@ export async function sendDigestEmail(
       from: EMAIL_FROM,
       to,
       subject: `FoodRisk Watch: ${alerts.length} alert${alerts.length === 1 ? "" : "s"} this week`,
-      html: digestEmailHtml(alerts, manageUrl, unsubscribeUrl),
-      text: digestEmailText(alerts, manageUrl, unsubscribeUrl),
+      html: digestEmailHtml(alerts, manageUrl, unsubscribeUrl, baseUrl),
+      text: digestEmailText(alerts, manageUrl, unsubscribeUrl, baseUrl),
       headers: {
         "X-Entity-Ref-ID": `digest-${Date.now()}`,
       },
