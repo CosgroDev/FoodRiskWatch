@@ -18,18 +18,20 @@ type ParsedFact = {
 const RASFF_BASE_URL =
   "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view";
 
+// Environment variable for how many days back to fetch (default 7)
+const INGEST_DAYS_BACK = Number(process.env.INGEST_DAYS_BACK || "7");
+
 // Build URL with date filter to get recent alerts
 function buildRasffUrl(): string {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const now = new Date();
+  const fromDate = new Date();
+  fromDate.setDate(now.getDate() - INGEST_DAYS_BACK);
 
-  // Format as DD/MM/YYYY (EU format)
-  const day = String(thirtyDaysAgo.getDate()).padStart(2, "0");
-  const month = String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0");
-  const year = thirtyDaysAgo.getFullYear();
-  const dateFrom = `${day}/${month}/${year}`;
+  // Format as ISO datetime with Z suffix
+  const dateFrom = fromDate.toISOString().split(".")[0] + "Z";
+  const dateTo = now.toISOString().split(".")[0] + "Z";
 
-  return `${RASFF_BASE_URL}?format=json&api-version=v1.0&NOTIF_DATE_FROM=${encodeURIComponent(dateFrom)}`;
+  return `${RASFF_BASE_URL}?NOTIF_DATE_FROM=${dateFrom}&NOTIF_DATE_TO=${dateTo}&format=json&api-version=v1.0`;
 }
 
 // Reduced page limit to ensure job completes within timeout
