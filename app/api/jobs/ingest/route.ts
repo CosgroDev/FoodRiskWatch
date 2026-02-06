@@ -167,9 +167,14 @@ export async function GET(req: NextRequest) {
   let nextUrl: string | null = buildRasffUrl();
   let page = 0;
   let insertedFacts = 0;
+  let totalRecordsFetched = 0;
+
+  console.log(`[Ingest] Starting with URL: ${nextUrl}`);
+  console.log(`[Ingest] PAGE_LIMIT: ${PAGE_LIMIT}, INGEST_DAYS_BACK: ${INGEST_DAYS_BACK}`);
 
   while (nextUrl && page < PAGE_LIMIT) {
     page += 1;
+    console.log(`[Ingest] Fetching page ${page}...`);
     const res: Response = await fetch(nextUrl);
     if (!res.ok) {
       console.error("RASFF fetch failed", res.status, await res.text());
@@ -178,7 +183,12 @@ export async function GET(req: NextRequest) {
 
     const json = await res.json();
     const records: RawRecord[] = json.value || json.records || [];
-    nextUrl = json["@odata.nextLink"] || json.nextLink || null;
+    totalRecordsFetched += records.length;
+
+    // Check for pagination - log what we find
+    const newNextUrl = json["@odata.nextLink"] || json.nextLink || null;
+    console.log(`[Ingest] Page ${page}: Got ${records.length} records. NextLink: ${newNextUrl ? "yes" : "no"}`);
+    nextUrl = newNextUrl;
 
     for (const record of records) {
       console.log("Ingesting record keys", Object.keys(record));
@@ -217,5 +227,14 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, pagesProcessed: page, factsUpserted: insertedFacts });
+  return NextResponse.json({
+    ok: true,
+    pagesProcessed: page,
+    totalRecordsFetched,
+    factsUpserted: insertedFacts,
+    config: {
+      daysBack: INGEST_DAYS_BACK,
+      pageLimit: PAGE_LIMIT,
+    },
+  });
 }
