@@ -22,9 +22,14 @@ const RASFF_BASE_URL =
 function buildRasffUrl(): string {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const dateFrom = thirtyDaysAgo.toISOString().split("T")[0]; // YYYY-MM-DD format
 
-  return `${RASFF_BASE_URL}?format=json&api-version=v1.0&NOTIF_DATE_FROM=${dateFrom}`;
+  // Format as DD/MM/YYYY (EU format)
+  const day = String(thirtyDaysAgo.getDate()).padStart(2, "0");
+  const month = String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0");
+  const year = thirtyDaysAgo.getFullYear();
+  const dateFrom = `${day}/${month}/${year}`;
+
+  return `${RASFF_BASE_URL}?format=json&api-version=v1.0&NOTIF_DATE_FROM=${encodeURIComponent(dateFrom)}`;
 }
 
 // Reduced page limit to ensure job completes within timeout
