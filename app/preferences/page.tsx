@@ -31,19 +31,37 @@ function OptionPills({
       onChange([...values, value]);
     }
   };
+
+  const allSelected = options.length > 0 && values.length === options.length;
+
+  const selectAll = () => {
+    onChange([...options]);
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <label>{label}</label>
-        {values.length > 0 && (
-          <button
-            type="button"
-            onClick={() => onChange([])}
-            className="text-xs font-semibold text-primary hover:text-primaryHover transition"
-          >
-            Clear
-          </button>
-        )}
+        <div className="flex gap-2">
+          {!allSelected && options.length > 0 && (
+            <button
+              type="button"
+              onClick={selectAll}
+              className="text-xs font-semibold text-primary hover:text-primaryHover transition"
+            >
+              Select all
+            </button>
+          )}
+          {values.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-xs font-semibold text-primary hover:text-primaryHover transition"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
