@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
+import { normalizeHazard, normalizeCategory, normalizeCountry } from "../../../../lib/normalize";
 import crypto from "crypto";
 
 type RawRecord = Record<string, unknown>;
@@ -72,6 +73,7 @@ function extractHazards(record: RawRecord): string[] {
     }
   });
 
+  // Clean up and normalize hazards
   const cleaned = Array.from(
     new Set(
       candidates
@@ -79,17 +81,7 @@ function extractHazards(record: RawRecord): string[] {
         .filter(Boolean)
         .map((v) => v.replace(/\s+/g, " "))
         .map((v) => v.replace(/^["']|["']$/g, "")) // drop surrounding quotes
-        .map((v) => {
-          const lower = v.toLowerCase();
-          // light normalization of common synonyms
-          if (lower.includes("salmonella")) return "Salmonella";
-          if (lower.includes("listeria")) return "Listeria";
-          if (lower.includes("mycotoxin")) return "Mycotoxin";
-          if (lower.includes("aflatoxin")) return "Aflatoxin";
-          if (lower.includes("escherichia") || lower.includes("e.coli") || lower.includes("e coli")) return "E. coli";
-          if (lower.includes("allergen")) return "Allergen";
-          return v[0] ? v[0].toUpperCase() + v.slice(1) : v;
-        })
+        .map((v) => normalizeHazard(v) || v)
     )
   );
 
@@ -97,16 +89,16 @@ function extractHazards(record: RawRecord): string[] {
 }
 
 function parseFact(record: RawRecord): Omit<ParsedFact, "hazard"> {
+  const rawCategory = pick(record, ["product_category_desc", "productCategory", "product_category"]) as string | undefined;
+  const rawOriginCountry = pick(record, ["origin_country_desc", "originCountry", "countryOfOrigin", "country"]) as string | undefined;
+  const rawNotifyingCountry = pick(record, ["notifying_country_desc", "notifyingCountry", "notifying_member"]) as string | undefined;
+
   return {
-    product_category:
-      (pick(record, ["product_category_desc", "productCategory", "product_category"]) as string) || null,
+    product_category: normalizeCategory(rawCategory),
     product_text:
       (pick(record, ["product_name", "product", "productText", "productDescription"]) as string) || null,
-    origin_country:
-      (pick(record, ["origin_country_desc", "originCountry", "countryOfOrigin", "country"]) as string) ||
-      null,
-    notifying_country:
-      (pick(record, ["notifying_country_desc", "notifyingCountry", "notifying_member"]) as string) || null,
+    origin_country: normalizeCountry(rawOriginCountry),
+    notifying_country: normalizeCountry(rawNotifyingCountry),
     alert_date:
       (pick(record, ["notif_date", "publishedAt", "alertDate", "date"]) as string) ||
       null,
