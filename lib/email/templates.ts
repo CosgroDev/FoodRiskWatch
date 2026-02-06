@@ -63,6 +63,61 @@ FoodRisk Watch - Keeping you informed about food safety in Europe
   `.trim();
 }
 
+export function loginEmailHtml(manageUrl: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage your FoodRisk Watch preferences</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #16a34a; margin: 0;">FoodRisk Watch</h1>
+    <p style="color: #64748b; margin: 5px 0 0;">Food Safety Alerts for Europe</p>
+  </div>
+
+  <div style="background: #f8fafc; border-radius: 12px; padding: 30px; margin-bottom: 20px;">
+    <h2 style="margin-top: 0; color: #1e293b;">Welcome back!</h2>
+    <p>You're already subscribed to FoodRisk Watch. Click the button below to manage your alert preferences.</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${manageUrl}" style="background: #16a34a; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Manage my preferences</a>
+    </div>
+
+    <p style="color: #64748b; font-size: 14px;">This link expires in 30 days.</p>
+  </div>
+
+  <p style="color: #64748b; font-size: 14px;">If you didn't request this email, you can safely ignore it.</p>
+
+  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+
+  <p style="color: #94a3b8; font-size: 12px; text-align: center;">
+    FoodRisk Watch - Keeping you informed about food safety in Europe
+  </p>
+</body>
+</html>
+  `.trim();
+}
+
+export function loginEmailText(manageUrl: string): string {
+  return `
+Welcome back to FoodRisk Watch!
+
+You're already subscribed to FoodRisk Watch. Click the link below to manage your alert preferences.
+
+Manage your preferences: ${manageUrl}
+
+This link expires in 30 days.
+
+If you didn't request this email, you can safely ignore it.
+
+--
+FoodRisk Watch - Keeping you informed about food safety in Europe
+  `.trim();
+}
+
 export function digestEmailHtml(
   alerts: Alert[],
   manageUrl: string,

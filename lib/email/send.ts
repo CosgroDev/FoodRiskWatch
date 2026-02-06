@@ -2,6 +2,8 @@ import { getResend, EMAIL_FROM } from "./client";
 import {
   verificationEmailHtml,
   verificationEmailText,
+  loginEmailHtml,
+  loginEmailText,
   digestEmailHtml,
   digestEmailText,
 } from "./templates";
@@ -37,6 +39,31 @@ export async function sendVerificationEmail(
     return { success: true };
   } catch (err) {
     console.error("[Email] Exception sending verification email:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+export async function sendLoginEmail(
+  to: string,
+  manageUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await getResend().emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject: "Manage your FoodRisk Watch preferences",
+      html: loginEmailHtml(manageUrl),
+      text: loginEmailText(manageUrl),
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send login email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("[Email] Exception sending login email:", err);
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }
