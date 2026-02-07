@@ -79,16 +79,16 @@ export default function HomePage() {
             </button>
             {error && <p className="text-red-600 text-sm m-0">{error}</p>}
             {result && (
-              <div className="text-sm text-textMuted grid gap-2 p-3 rounded-lg bg-base border border-border">
-                <strong className="text-ink">Test links</strong>
-                <a href={result.verifyUrl} className="text-primary underline">
-                  Verify link
-                </a>
-                {result.manageUrl && (
-                  <a href={result.manageUrl} className="text-primary underline">
-                    Manage preferences
-                  </a>
-                )}
+              <div className="text-sm grid gap-2 p-4 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <strong className="text-green-800">Check your inbox</strong>
+                </div>
+                <p className="text-green-700 m-0">
+                  We&apos;ve sent a verification link to <strong>{email}</strong>. Click it to confirm your subscription and set your preferences.
+                </p>
               </div>
             )}
           </div>
