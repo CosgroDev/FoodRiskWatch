@@ -151,7 +151,6 @@ export function digestEmailHtml(
           <td style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
             <div style="margin-bottom: 8px;">
               <span style="background: #f0fdf4; color: #16a34a; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${alert.product_category || "Unknown category"}</span>
-              <span style="color: #94a3b8; font-size: 12px; margin-left: 8px;">${date}</span>
             </div>
             <p style="margin: 0 0 12px; font-weight: 500;">${alert.product_text || "No product description"}</p>
             <div style="margin-bottom: 8px;">
@@ -162,7 +161,12 @@ export function digestEmailHtml(
               <span style="color: #64748b; font-size: 12px; font-weight: 500;">Origin:</span>
               ${countryPills}
             </div>
-            <a href="${detailUrl}" style="color: #16a34a; font-size: 14px; font-weight: 500;">View details &rarr;</a>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 0;"><a href="${detailUrl}" style="color: #16a34a; font-size: 14px; font-weight: 500;">View details &rarr;</a></td>
+                <td style="padding: 0; text-align: right;"><span style="color: #94a3b8; font-size: 12px;">${date}</span></td>
+              </tr>
+            </table>
           </td>
         </tr>
       `;
