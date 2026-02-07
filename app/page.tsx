@@ -7,7 +7,7 @@ type SubscribeResponse = {
   manageUrl?: string;
 };
 
-const chips = ["Hazard filters", "Category filters", "Country filters", "Weekly digest"];
+const chips = ["Product category filters", "Aggregated hazard alerts", "Origin country tracking", "Weekly digest"];
 
 export default function HomePage() {
   const [email, setEmail] = useState("");
@@ -47,8 +47,8 @@ export default function HomePage() {
         </div>
         <h1 className="text-3xl md:text-[34px] font-extrabold leading-tight">Food safety alerts, tailored to you.</h1>
         <p className="text-muted leading-relaxed max-w-3xl mx-auto md:mx-0">
-          FoodRisk Watch turns public EU safety alerts into clean, weekly digests. Choose hazards, product categories,
-          and countries—then let us curate the noise into action.
+          FoodRisk Watch turns public EU RASFF alerts into clean, weekly digests. Filter by product categories
+          and receive alerts with aggregated hazards and origin countries—curated for your QA and supply chain teams.
         </p>
         <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-1">
           {chips.map((c) => (
@@ -101,10 +101,11 @@ export default function HomePage() {
           </div>
           <div className="mt-3 space-y-3">
             {[
-              "No login — magic links for access",
-              "Weekly digest (daily & instant coming soon)",
-              "Preferences for hazards, categories, countries",
-              "Powered by public RASFF data (not affiliated)",
+              "No login required — secure magic links",
+              "Weekly digest emails with your alerts",
+              "Filter by product categories",
+              "View all hazards and origin countries per alert",
+              "Detailed alert pages with full RASFF data",
             ].map((item) => (
               <div key={item} className="flex gap-3 items-start">
                 <span className="h-2.5 w-2.5 mt-1 rounded-full bg-primary" />
@@ -115,8 +116,14 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="pt-2 border-t border-slate-200 text-center md:text-left">
-        <small>Powered by public RASFF data. We are not affiliated with RASFF.</small>
+      <div className="pt-4 border-t border-slate-200 text-center md:text-left space-y-2">
+        <p className="text-sm text-muted m-0">
+          Powered by public RASFF data. We are not affiliated with RASFF or the European Commission.
+        </p>
+        <p className="text-sm text-muted m-0">
+          Developed by <span className="font-semibold text-ink">CGRV</span>. For issues or queries, contact{" "}
+          <a href="mailto:dale@cgrv.co.uk" className="text-primary hover:underline">dale@cgrv.co.uk</a>
+        </p>
       </div>
     </div>
   );
