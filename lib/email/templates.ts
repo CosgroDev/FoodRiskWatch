@@ -1,8 +1,8 @@
 type Alert = {
   id: string;
-  hazard: string | null;
+  hazards: string[];
+  countries: string[];
   product_category: string | null;
-  origin_country: string | null;
   product_text: string | null;
   alert_date: string | null;
   link: string | null;
@@ -136,18 +136,33 @@ export function digestEmailHtml(
 
       const detailUrl = `${baseUrl}/alerts/${encodeURIComponent(alert.id)}`;
 
+      // Render hazard pills
+      const hazardPills = alert.hazards
+        .map(h => `<span style="background: #fef2f2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; margin: 2px 4px 2px 0;">${h}</span>`)
+        .join("");
+
+      // Render country pills
+      const countryPills = alert.countries
+        .map(c => `<span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; margin: 2px 4px 2px 0;">${c}</span>`)
+        .join("");
+
       return `
         <tr>
           <td style="padding: 16px; border-bottom: 1px solid #e2e8f0;">
             <div style="margin-bottom: 8px;">
-              <span style="background: #fef2f2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${alert.hazard || "Unknown hazard"}</span>
-              <span style="background: #f0fdf4; color: #16a34a; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 4px;">${alert.product_category || "Unknown category"}</span>
+              <span style="background: #f0fdf4; color: #16a34a; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${alert.product_category || "Unknown category"}</span>
+              <span style="color: #94a3b8; font-size: 12px; margin-left: 8px;">${date}</span>
             </div>
-            <p style="margin: 0 0 8px; font-weight: 500;">${alert.product_text || "No product description"}</p>
-            <p style="margin: 0; color: #64748b; font-size: 14px;">
-              Origin: ${alert.origin_country || "Unknown"} | ${date}
-              | <a href="${detailUrl}" style="color: #16a34a;">View details</a>
-            </p>
+            <p style="margin: 0 0 12px; font-weight: 500;">${alert.product_text || "No product description"}</p>
+            <div style="margin-bottom: 8px;">
+              <span style="color: #64748b; font-size: 12px; font-weight: 500;">Hazards:</span>
+              ${hazardPills}
+            </div>
+            <div style="margin-bottom: 12px;">
+              <span style="color: #64748b; font-size: 12px; font-weight: 500;">Origin:</span>
+              ${countryPills}
+            </div>
+            <a href="${detailUrl}" style="color: #16a34a; font-size: 14px; font-weight: 500;">View details &rarr;</a>
           </td>
         </tr>
       `;
@@ -208,10 +223,13 @@ export function digestEmailText(
         ? new Date(alert.alert_date).toLocaleDateString("en-GB")
         : "Unknown date";
       const detailUrl = `${baseUrl}/alerts/${encodeURIComponent(alert.id)}`;
+      const hazardsList = alert.hazards.join(", ");
+      const countriesList = alert.countries.join(", ");
       return `
-- ${alert.hazard || "Unknown hazard"} | ${alert.product_category || "Unknown category"}
+- ${alert.product_category || "Unknown category"} | ${date}
   ${alert.product_text || "No product description"}
-  Origin: ${alert.origin_country || "Unknown"} | ${date}
+  Hazards: ${hazardsList}
+  Origin: ${countriesList}
   Details: ${detailUrl}
       `.trim();
     })

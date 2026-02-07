@@ -5,10 +5,10 @@ import { useParams } from "next/navigation";
 
 type Alert = {
   id: string;
-  hazard: string | null;
+  hazards: string[];
+  countries: string[];
   product_category: string | null;
   product_text: string | null;
-  origin_country: string | null;
   notifying_country: string | null;
   alert_date: string | null;
   link: string | null;
@@ -118,31 +118,54 @@ export default function AlertDetailPage() {
           Alert Details
         </div>
         <h1 className="text-2xl font-bold">{alert.product_text || "Food Safety Alert"}</h1>
-        <div className="flex flex-wrap gap-2">
-          {alert.hazard && (
-            <span className="px-3 py-1 rounded-lg bg-red-50 text-red-700 text-sm font-semibold border border-red-200">
-              {alert.hazard}
-            </span>
-          )}
-          {alert.product_category && (
-            <span className="px-3 py-1 rounded-lg bg-green-50 text-green-700 text-sm font-semibold border border-green-200">
-              {alert.product_category}
-            </span>
-          )}
-        </div>
+        {alert.product_category && (
+          <span className="inline-block px-3 py-1 rounded-lg bg-green-50 text-green-700 text-sm font-semibold border border-green-200">
+            {alert.product_category}
+          </span>
+        )}
       </div>
 
       <div className="bg-base border border-border rounded-xl p-4">
         <h2 className="font-semibold text-lg mb-3">Alert Information</h2>
         <dl>
           <InfoRow label="Date" value={formattedDate} />
-          <InfoRow label="Hazard" value={alert.hazard} />
           <InfoRow label="Category" value={alert.product_category} />
           <InfoRow label="Product" value={alert.product_text} />
-          <InfoRow label="Origin Country" value={alert.origin_country} />
           <InfoRow label="Notifying Country" value={alert.notifying_country} />
         </dl>
       </div>
+
+      {alert.hazards.length > 0 && (
+        <div className="bg-base border border-border rounded-xl p-4">
+          <h2 className="font-semibold text-lg mb-3">Hazards</h2>
+          <div className="flex flex-wrap gap-2">
+            {alert.hazards.map((hazard, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-sm font-semibold border border-red-200"
+              >
+                {hazard}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {alert.countries.length > 0 && (
+        <div className="bg-base border border-border rounded-xl p-4">
+          <h2 className="font-semibold text-lg mb-3">Origin Countries</h2>
+          <div className="flex flex-wrap gap-2">
+            {alert.countries.map((country, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold border border-blue-200"
+              >
+                {country}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <ExpandableJson data={alert.raw_payload} />
 

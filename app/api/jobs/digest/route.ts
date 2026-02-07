@@ -16,8 +16,9 @@ type FilterRule = {
   rule_value: string;
 };
 
-type AlertFact = {
+type AlertFactRow = {
   id: string;
+  raw_id: string | null;
   hazard: string | null;
   product_category: string | null;
   origin_country: string | null;
@@ -25,6 +26,55 @@ type AlertFact = {
   alert_date: string | null;
   link: string | null;
 };
+
+type AggregatedAlert = {
+  id: string;
+  raw_id: string;
+  hazards: string[];
+  countries: string[];
+  product_category: string | null;
+  product_text: string | null;
+  alert_date: string | null;
+  link: string | null;
+  fact_ids: string[];
+};
+
+function aggregateAlerts(rows: AlertFactRow[]): AggregatedAlert[] {
+  const grouped = new Map<string, AlertFactRow[]>();
+
+  for (const row of rows) {
+    const key = row.raw_id || row.id;
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key)!.push(row);
+  }
+
+  const aggregated: AggregatedAlert[] = [];
+
+  const entries = Array.from(grouped.entries());
+  for (let i = 0; i < entries.length; i++) {
+    const [rawId, alertRows] = entries[i];
+    const first = alertRows[0];
+    const hazards = Array.from(new Set(alertRows.map(r => r.hazard).filter((h): h is string => !!h && h !== "Unknown")));
+    const countries = Array.from(new Set(alertRows.map(r => r.origin_country).filter((c): c is string => !!c && c !== "Unknown")));
+    const factIds = alertRows.map(r => r.id);
+
+    aggregated.push({
+      id: first.id,
+      raw_id: rawId,
+      hazards: hazards.length > 0 ? hazards : ["Unknown"],
+      countries: countries.length > 0 ? countries : ["Unknown"],
+      product_category: first.product_category,
+      product_text: first.product_text,
+      alert_date: first.alert_date,
+      link: first.link,
+      fact_ids: factIds,
+    });
+  }
+
+  return aggregated;
+}
 
 export async function GET(req: NextRequest) {
   // Support both custom header (local testing) and Vercel's cron auth
@@ -85,23 +135,26 @@ export async function GET(req: NextRequest) {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const { data: allAlerts } = await sb
+    const { data: allAlertRows } = await sb
       .from("alerts_fact")
-      .select("id, hazard, product_category, origin_country, product_text, alert_date, link")
+      .select("id, raw_id, hazard, product_category, origin_country, product_text, alert_date, link")
       .gte("alert_date", oneWeekAgo.toISOString())
-      .returns<AlertFact[]>();
+      .returns<AlertFactRow[]>();
 
-    if (!allAlerts || allAlerts.length === 0) {
+    if (!allAlertRows || allAlertRows.length === 0) {
       continue;
     }
 
-    // Filter alerts by category. If no filters set, include all alerts (user selected "Show All")
-    const alerts = categoryFilters.size > 0
-      ? allAlerts.filter((alert) => {
-          const normalizedCategory = normalizeCategory(alert.product_category);
+    // Filter rows by category before aggregating. If no filters set, include all alerts.
+    const filteredRows = categoryFilters.size > 0
+      ? allAlertRows.filter((row) => {
+          const normalizedCategory = normalizeCategory(row.product_category);
           return normalizedCategory && categoryFilters.has(normalizedCategory);
         })
-      : allAlerts;
+      : allAlertRows;
+
+    // Aggregate rows by raw_id to combine hazards and countries
+    const alerts = aggregateAlerts(filteredRows);
 
     if (alerts.length === 0) {
       continue;
@@ -115,17 +168,17 @@ export async function GET(req: NextRequest) {
 
     const deliveryIds = (existingDeliveries || []).map((d) => d.id);
 
-    let deliveredAlertIds: string[] = [];
+    let deliveredAlertIds: Set<string> = new Set();
     if (deliveryIds.length > 0) {
       const { data: deliveredItems } = await sb
         .from("delivery_items")
         .select("alerts_fact_id")
         .in("delivery_id", deliveryIds);
-      deliveredAlertIds = (deliveredItems || []).map((i) => i.alerts_fact_id);
+      deliveredAlertIds = new Set((deliveredItems || []).map((i) => i.alerts_fact_id));
     }
 
-    // Filter out already delivered alerts
-    const newAlerts = alerts.filter((a) => !deliveredAlertIds.includes(a.id));
+    // Filter out already delivered alerts (check if any of the fact_ids were delivered)
+    const newAlerts = alerts.filter((a) => !a.fact_ids.some(id => deliveredAlertIds.has(id)));
 
     if (newAlerts.length === 0) {
       continue;
@@ -147,11 +200,13 @@ export async function GET(req: NextRequest) {
       continue;
     }
 
-    // Create delivery items
-    const deliveryItems = newAlerts.map((alert) => ({
-      delivery_id: delivery.id,
-      alerts_fact_id: alert.id,
-    }));
+    // Create delivery items for all fact_ids in each aggregated alert
+    const deliveryItems = newAlerts.flatMap((alert) =>
+      alert.fact_ids.map((factId) => ({
+        delivery_id: delivery.id,
+        alerts_fact_id: factId,
+      }))
+    );
 
     const { error: itemsError } = await sb.from("delivery_items").insert(deliveryItems);
 

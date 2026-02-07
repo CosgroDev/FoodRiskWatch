@@ -10,9 +10,9 @@ import {
 
 type Alert = {
   id: string;
-  hazard: string | null;
+  hazards: string[];
+  countries: string[];
   product_category: string | null;
-  origin_country: string | null;
   product_text: string | null;
   alert_date: string | null;
   link: string | null;
