@@ -4,7 +4,7 @@ import { normalizeCategory } from "../../../lib/normalize";
 
 type RulePayload = {
   token?: string;
-  frequency?: "weekly" | "daily" | "instant";
+  frequency?: "monthly" | "weekly" | "daily";
   categories?: string[];
 };
 
@@ -33,7 +33,7 @@ async function ensureDefaultSubscription(sb: ReturnType<typeof supabaseServer>, 
 
   const { data: created, error } = await sb
     .from("subscriptions")
-    .insert({ user_id: userId, tier: "free", frequency: "weekly", timezone: "Europe/London", is_active: true })
+    .insert({ user_id: userId, tier: "free", frequency: "monthly", timezone: "Europe/London", is_active: true })
     .select("id, frequency")
     .single();
   if (error || !created) throw error;
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
   ).sort();
 
   const response = {
-    frequency: (subscription.frequency as "weekly" | "daily" | "instant") || "weekly",
+    frequency: (subscription.frequency as "monthly" | "weekly" | "daily") || "monthly",
     categories: (rules || []).filter((r) => r.rule_type === "category").map((r) => r.rule_value),
     availableCategories,
   };
@@ -109,12 +109,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: validation.error }, { status: 400 });
   }
 
-  const safeFrequency: "weekly" | "daily" | "instant" = body.frequency === "weekly" ? "weekly" : "weekly";
-
   const subscription = await ensureDefaultSubscription(sb, validation.userId);
+
+  // Frequency is managed via Stripe subscriptions, not directly from preferences
+  // Only update is_active status here
   await sb
     .from("subscriptions")
-    .update({ frequency: safeFrequency, is_active: true })
+    .update({ is_active: true })
     .eq("id", subscription.id);
 
   const filter = await ensureDefaultFilter(sb, subscription.id);

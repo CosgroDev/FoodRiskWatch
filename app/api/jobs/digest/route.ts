@@ -76,6 +76,38 @@ function aggregateAlerts(rows: AlertFactRow[]): AggregatedAlert[] {
   return aggregated;
 }
 
+// Determine which subscriptions should receive a digest today based on their frequency
+function shouldSendDigest(frequency: string): boolean {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+  const dayOfMonth = now.getUTCDate();
+
+  switch (frequency) {
+    case "daily":
+      return true; // Every day
+    case "weekly":
+      return dayOfWeek === 1; // Mondays only
+    case "monthly":
+      return dayOfMonth === 1; // 1st of the month only
+    default:
+      return false;
+  }
+}
+
+// Get the lookback period in days based on frequency
+function getLookbackDays(frequency: string): number {
+  switch (frequency) {
+    case "daily":
+      return 1;
+    case "weekly":
+      return 7;
+    case "monthly":
+      return 30;
+    default:
+      return 7;
+  }
+}
+
 export async function GET(req: NextRequest) {
   // Support both custom header (local testing) and Vercel's cron auth
   const customSecret = req.headers.get("x-cron-digest");
@@ -90,13 +122,12 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = supabaseServer();
-  const results: { email: string; alertCount: number; deliveryId: string }[] = [];
+  const results: { email: string; alertCount: number; deliveryId: string; frequency: string }[] = [];
 
-  // Get all active weekly subscriptions with user email
+  // Get all active subscriptions with user email
   const { data: subscriptions, error: subError } = await sb
     .from("subscriptions")
     .select("id, user_id, frequency, users!inner(email, status)")
-    .eq("frequency", "weekly")
     .eq("is_active", true)
     .returns<Subscription[]>();
 
@@ -105,10 +136,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "Failed to fetch subscriptions" }, { status: 500 });
   }
 
-  // Filter to only active users
+  // Filter to only active users who should receive a digest today
   const activeSubscriptions = (subscriptions || []).filter(
-    (s) => s.users?.status === "active"
+    (s) => s.users?.status === "active" && shouldSendDigest(s.frequency)
   );
+
+  console.log(`[Digest] Processing ${activeSubscriptions.length} subscriptions (filtered by frequency for today)`);
 
   for (const subscription of activeSubscriptions) {
     // Get filter rules for this subscription
@@ -131,14 +164,15 @@ export async function GET(req: NextRequest) {
     // Build filter criteria (only categories now)
     const categoryFilters = new Set(rules.filter((r) => r.rule_type === "category").map((r) => r.rule_value));
 
-    // Get alerts from the last 7 days
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    // Get alerts based on subscription frequency
+    const lookbackDays = getLookbackDays(subscription.frequency);
+    const lookbackDate = new Date();
+    lookbackDate.setDate(lookbackDate.getDate() - lookbackDays);
 
     const { data: allAlertRows } = await sb
       .from("alerts_fact")
       .select("id, raw_id, hazard, product_category, origin_country, product_text, alert_date, link")
-      .gte("alert_date", oneWeekAgo.toISOString())
+      .gte("alert_date", lookbackDate.toISOString())
       .returns<AlertFactRow[]>();
 
     if (!allAlertRows || allAlertRows.length === 0) {
@@ -247,12 +281,13 @@ export async function GET(req: NextRequest) {
         .update({ status: "sent", sent_at: new Date().toISOString() })
         .eq("id", delivery.id);
 
-      console.log(`[Digest] Sent ${newAlerts.length} alerts to ${subscription.users?.email}`);
+      console.log(`[Digest] Sent ${newAlerts.length} alerts to ${subscription.users?.email} (${subscription.frequency})`);
 
       results.push({
         email: subscription.users?.email || "unknown",
         alertCount: newAlerts.length,
         deliveryId: delivery.id,
+        frequency: subscription.frequency,
       });
     } else {
       // Mark delivery as failed

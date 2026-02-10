@@ -1,10 +1,10 @@
 ﻿"use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type PrefsResponse = {
-  frequency: "weekly" | "daily" | "instant";
+  frequency: "monthly" | "weekly" | "daily";
   categories: string[];
   availableCategories: string[];
 };
@@ -90,7 +90,7 @@ function PreferencesContent() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [frequency, setFrequency] = useState<"weekly" | "daily" | "instant">("weekly");
+  const [frequency, setFrequency] = useState<"monthly" | "weekly" | "daily">("monthly");
   const [categories, setCategories] = useState<string[]>([]);
 
   // Dynamic options from the database
@@ -114,7 +114,7 @@ function PreferencesContent() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const disabledFrequencies = useMemo(() => ({ daily: true, instant: true }), []);
+  const isPaidTier = frequency === "weekly" || frequency === "daily";
 
   const save = async () => {
     if (!token) return;
@@ -172,34 +172,42 @@ function PreferencesContent() {
         )}
       </div>
 
-      <div className="p-4 bg-base border border-border rounded-xl shadow-soft max-w-xs">
-        <div className="grid gap-2">
-          <label className="font-semibold">Frequency</label>
-          <div className="flex flex-col gap-2">
-            {[
-              { value: "weekly", label: "Weekly (included)", disabled: false },
-              { value: "daily", label: "Daily (coming soon)", disabled: disabledFrequencies.daily },
-              { value: "instant", label: "Instant (coming soon)", disabled: disabledFrequencies.instant },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={opt.disabled}
-                onClick={() => !opt.disabled && setFrequency(opt.value as typeof frequency)}
-                className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
-                  frequency === opt.value
-                    ? "border-primary bg-primary text-white"
-                    : "border-border bg-surface text-secondary hover:border-primary/60"
-                } ${opt.disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                <span>{opt.label}</span>
-                <span
-                  className={`h-3 w-3 rounded-full ${
-                    frequency === opt.value ? "bg-white" : "bg-border"
-                  }`}
-                />
-              </button>
-            ))}
+      <div className="p-4 bg-base border border-border rounded-xl shadow-soft">
+        <div className="grid gap-3">
+          <div className="flex items-center justify-between">
+            <label className="font-semibold">Your Plan</label>
+            <a href="/pricing" className="text-sm text-primary hover:underline font-medium">
+              {isPaidTier ? "Manage subscription" : "Upgrade plan"}
+            </a>
+          </div>
+          <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+            frequency === "monthly"
+              ? "border-primary bg-primary/5"
+              : frequency === "weekly"
+              ? "border-blue-500 bg-blue-50"
+              : "border-purple-500 bg-purple-50"
+          }`}>
+            <div className="flex-1">
+              <p className="font-semibold text-ink">
+                {frequency === "monthly" && "Monthly (Free)"}
+                {frequency === "weekly" && "Weekly (£7/month)"}
+                {frequency === "daily" && "Daily (£11/month)"}
+              </p>
+              <p className="text-sm text-muted">
+                {frequency === "monthly" && "Digest sent on the 1st of each month"}
+                {frequency === "weekly" && "Digest sent every Monday morning"}
+                {frequency === "daily" && "Digest sent every morning"}
+              </p>
+            </div>
+            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+              frequency === "monthly"
+                ? "bg-primary/10 text-primary"
+                : frequency === "weekly"
+                ? "bg-blue-100 text-blue-700"
+                : "bg-purple-100 text-purple-700"
+            }`}>
+              {frequency === "monthly" ? "Free" : "Pro"}
+            </span>
           </div>
         </div>
       </div>
