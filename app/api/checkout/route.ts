@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
 
   const priceId = PRICE_IDS[body.frequency];
   if (!priceId) {
-    return NextResponse.json({ message: "Pricing not configured" }, { status: 500 });
+    console.error(`[Checkout] Missing price ID for frequency: ${body.frequency}. Set STRIPE_PRICE_${body.frequency.toUpperCase()} env var.`);
+    return NextResponse.json({
+      message: `Stripe price not configured for ${body.frequency} plan. Please contact support.`
+    }, { status: 500 });
   }
 
   // Get user email
@@ -60,57 +63,63 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  const stripe = getStripe();
-  const baseUrl = getAppBaseUrl();
+  try {
+    const stripe = getStripe();
+    const baseUrl = getAppBaseUrl();
 
-  let customerId = subscription?.stripe_customer_id;
+    let customerId = subscription?.stripe_customer_id;
 
-  // Create Stripe customer if needed
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email,
-      metadata: {
-        user_id: validation.userId,
-        subscription_id: subscription?.id || "",
-      },
-    });
-    customerId = customer.id;
+    // Create Stripe customer if needed
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {
+          user_id: validation.userId,
+          subscription_id: subscription?.id || "",
+        },
+      });
+      customerId = customer.id;
 
-    // Save customer ID
-    if (subscription) {
-      await sb
-        .from("subscriptions")
-        .update({ stripe_customer_id: customerId })
-        .eq("id", subscription.id);
+      // Save customer ID
+      if (subscription) {
+        await sb
+          .from("subscriptions")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", subscription.id);
+      }
     }
-  }
 
-  // Create checkout session
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: "subscription",
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      subscription_data: {
+        metadata: {
+          user_id: validation.userId,
+          subscription_id: subscription?.id || "",
+          frequency: body.frequency,
+        },
       },
-    ],
-    subscription_data: {
+      success_url: `${baseUrl}/preferences?token=${encodeURIComponent(body.token!)}&upgraded=true`,
+      cancel_url: `${baseUrl}/pricing?token=${encodeURIComponent(body.token!)}`,
       metadata: {
         user_id: validation.userId,
         subscription_id: subscription?.id || "",
         frequency: body.frequency,
       },
-    },
-    success_url: `${baseUrl}/preferences?token=${encodeURIComponent(body.token!)}&upgraded=true`,
-    cancel_url: `${baseUrl}/pricing?token=${encodeURIComponent(body.token!)}`,
-    metadata: {
-      user_id: validation.userId,
-      subscription_id: subscription?.id || "",
-      frequency: body.frequency,
-    },
-  });
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    console.error("[Checkout] Stripe error:", err);
+    const message = err instanceof Error ? err.message : "Payment system error";
+    return NextResponse.json({ message }, { status: 500 });
+  }
 }
