@@ -3,8 +3,9 @@
 import { FormEvent, useState } from "react";
 
 type SubscribeResponse = {
-  verifyUrl: string;
+  verifyUrl?: string;
   manageUrl?: string;
+  isExistingUser?: boolean;
 };
 
 const chips = ["Product category filters", "Aggregated hazard alerts", "Origin country tracking", "Weekly digest"];
@@ -63,8 +64,8 @@ export default function HomePage() {
         <form onSubmit={onSubmit} className="card p-5 shadow-pop border border-border relative overflow-visible">
           <div className="space-y-4">
             <div>
-              <p className="font-bold text-ink m-0 text-lg">Start receiving alerts</p>
-              <p className="text-muted m-0 text-sm mt-1">Enter your email and we&apos;ll send you a secure link to set up your preferences.</p>
+              <p className="font-bold text-ink m-0 text-lg">Get started or sign in</p>
+              <p className="text-muted m-0 text-sm mt-1">New here? We&apos;ll set you up. Already subscribed? We&apos;ll send you a link to manage your alerts.</p>
             </div>
             <div className="space-y-2">
               <label htmlFor="email">Your email address</label>
@@ -79,14 +80,18 @@ export default function HomePage() {
               />
             </div>
             <button className="btn-primary" type="submit" disabled={loading}>
-              {loading ? "Sending link…" : "Send me a setup link"}
+              {loading ? "Sending link…" : "Continue with email"}
             </button>
-            <p className="text-xs text-muted m-0">No password needed. We&apos;ll email you a secure link to manage your alerts.</p>
+            <p className="text-xs text-muted m-0">No password needed. We&apos;ll email you a secure magic link.</p>
             {error && <p className="text-red-600 text-sm m-0">{error}</p>}
             {result && (
               <div className="text-sm p-3 rounded-lg bg-green-50 border border-green-200">
                 <p className="text-green-800 m-0 font-medium">Check your inbox!</p>
-                <p className="text-green-700 m-0 mt-1">We&apos;ve sent you an email with a link to set up your food safety alerts.</p>
+                {result.isExistingUser ? (
+                  <p className="text-green-700 m-0 mt-1">Welcome back! We&apos;ve sent you a link to manage your preferences and alerts.</p>
+                ) : (
+                  <p className="text-green-700 m-0 mt-1">We&apos;ve sent you an email with a link to set up your food safety alerts.</p>
+                )}
               </div>
             )}
           </div>
