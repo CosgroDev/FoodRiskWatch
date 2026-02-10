@@ -8,7 +8,7 @@ const tiers = [
   {
     name: "Monthly",
     price: "Free",
-    priceDetail: "forever",
+    priceDetail: "",
     frequency: "monthly",
     description: "Get started with monthly food safety digests",
     features: [
@@ -176,7 +176,7 @@ function PricingContent() {
 
             {tier.frequency === "monthly" ? (
               <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
-                {token ? "Your Current Plan" : "Free Forever"}
+                {token ? "Your Current Plan" : "Free"}
               </div>
             ) : (
               <button
@@ -196,9 +196,6 @@ function PricingContent() {
       </div>
 
       <div className="text-center space-y-4 pt-4 border-t border-border">
-        <p className="text-sm text-muted">
-          All paid plans include a 7-day free trial. Cancel anytime.
-        </p>
         <div className="flex justify-center gap-6 text-sm">
           <a href="/terms" className="text-primary hover:underline">Terms of Service</a>
           <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>

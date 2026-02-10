@@ -176,7 +176,7 @@ function PreferencesContent() {
         <div className="grid gap-3">
           <div className="flex items-center justify-between">
             <label className="font-semibold">Your Plan</label>
-            <a href="/pricing" className="text-sm text-primary hover:underline font-medium">
+            <a href={`/pricing?token=${encodeURIComponent(token || "")}`} className="text-sm text-primary hover:underline font-medium">
               {isPaidTier ? "Manage subscription" : "Upgrade plan"}
             </a>
           </div>
