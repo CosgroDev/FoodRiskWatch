@@ -72,23 +72,38 @@ export async function sendLoginEmail(
   }
 }
 
+function getSubjectPeriod(frequency: string): string {
+  switch (frequency) {
+    case "daily":
+      return "today";
+    case "weekly":
+      return "this week";
+    case "monthly":
+      return "this month";
+    default:
+      return "this week";
+  }
+}
+
 export async function sendDigestEmail(
   to: string,
   alerts: Alert[],
-  manageToken: string
+  manageToken: string,
+  frequency: string = "weekly"
 ): Promise<{ success: boolean; error?: string }> {
   const baseUrl = getAppBaseUrl();
 
   const manageUrl = `${baseUrl}/preferences?token=${encodeURIComponent(manageToken)}`;
   const unsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${encodeURIComponent(manageToken)}`;
+  const period = getSubjectPeriod(frequency);
 
   try {
     const { error } = await getResend().emails.send({
       from: EMAIL_FROM,
       to,
-      subject: `FoodRisk Watch: ${alerts.length} alert${alerts.length === 1 ? "" : "s"} this week`,
-      html: digestEmailHtml(alerts, manageUrl, unsubscribeUrl, baseUrl),
-      text: digestEmailText(alerts, manageUrl, unsubscribeUrl, baseUrl),
+      subject: `FoodRisk Watch: ${alerts.length} alert${alerts.length === 1 ? "" : "s"} ${period}`,
+      html: digestEmailHtml(alerts, manageUrl, unsubscribeUrl, baseUrl, frequency),
+      text: digestEmailText(alerts, manageUrl, unsubscribeUrl, baseUrl, frequency),
       headers: {
         "X-Entity-Ref-ID": `digest-${Date.now()}`,
       },

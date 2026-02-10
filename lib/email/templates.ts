@@ -118,12 +118,27 @@ FoodRisk Watch - Keeping you informed about food safety in Europe
   `.trim();
 }
 
+function getPeriodText(frequency: string): { period: string; adjective: string } {
+  switch (frequency) {
+    case "daily":
+      return { period: "today", adjective: "Daily" };
+    case "weekly":
+      return { period: "this week", adjective: "Weekly" };
+    case "monthly":
+      return { period: "this month", adjective: "Monthly" };
+    default:
+      return { period: "this week", adjective: "Weekly" };
+  }
+}
+
 export function digestEmailHtml(
   alerts: Alert[],
   manageUrl: string,
   unsubscribeUrl: string,
-  baseUrl: string
+  baseUrl: string,
+  frequency: string = "weekly"
 ): string {
+  const { period, adjective } = getPeriodText(frequency);
   const alertRows = alerts
     .map((alert) => {
       const date = alert.alert_date
@@ -179,16 +194,16 @@ export function digestEmailHtml(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Weekly FoodRisk Watch Digest</title>
+  <title>Your ${adjective} FoodRisk Watch Digest</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="text-align: center; margin-bottom: 30px;">
     <h1 style="color: #16a34a; margin: 0;">FoodRisk Watch</h1>
-    <p style="color: #64748b; margin: 5px 0 0;">Your Weekly Food Safety Digest</p>
+    <p style="color: #64748b; margin: 5px 0 0;">Your ${adjective} Food Safety Digest</p>
   </div>
 
   <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-    <h2 style="margin-top: 0; color: #1e293b;">${alerts.length} alert${alerts.length === 1 ? "" : "s"} this week</h2>
+    <h2 style="margin-top: 0; color: #1e293b;">${alerts.length} alert${alerts.length === 1 ? "" : "s"} ${period}</h2>
     <p style="color: #64748b; margin-bottom: 0;">Based on your filter preferences, here are the food safety alerts that match your criteria.</p>
   </div>
 
@@ -219,8 +234,10 @@ export function digestEmailText(
   alerts: Alert[],
   manageUrl: string,
   unsubscribeUrl: string,
-  baseUrl: string
+  baseUrl: string,
+  frequency: string = "weekly"
 ): string {
+  const { period, adjective } = getPeriodText(frequency);
   const alertList = alerts
     .map((alert) => {
       const date = alert.alert_date
@@ -240,9 +257,9 @@ export function digestEmailText(
     .join("\n\n");
 
   return `
-FoodRisk Watch - Your Weekly Digest
+FoodRisk Watch - Your ${adjective} Digest
 
-${alerts.length} alert${alerts.length === 1 ? "" : "s"} this week
+${alerts.length} alert${alerts.length === 1 ? "" : "s"} ${period}
 
 Based on your filter preferences, here are the food safety alerts that match your criteria:
 

@@ -283,7 +283,8 @@ export async function GET(req: NextRequest) {
     const emailResult = await sendDigestEmail(
       subscription.users?.email || "",
       newAlerts,
-      manageToken
+      manageToken,
+      subscription.frequency
     );
 
     if (emailResult.success) {
