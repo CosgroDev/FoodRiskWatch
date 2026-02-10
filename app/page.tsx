@@ -62,8 +62,12 @@ export default function HomePage() {
       <div className="grid gap-4 md:grid-cols-2 items-start">
         <form onSubmit={onSubmit} className="card p-5 shadow-pop border border-border relative overflow-visible">
           <div className="space-y-4">
+            <div>
+              <p className="font-bold text-ink m-0 text-lg">Start receiving alerts</p>
+              <p className="text-muted m-0 text-sm mt-1">Enter your email and we&apos;ll send you a secure link to set up your preferences.</p>
+            </div>
             <div className="space-y-2">
-              <label htmlFor="email">Work or personal email</label>
+              <label htmlFor="email">Your email address</label>
               <input
                 id="email"
                 name="email"
@@ -75,13 +79,14 @@ export default function HomePage() {
               />
             </div>
             <button className="btn-primary" type="submit" disabled={loading}>
-              {loading ? "Submitting…" : "Get early alerts"}
+              {loading ? "Sending link…" : "Send me a setup link"}
             </button>
+            <p className="text-xs text-muted m-0">No password needed. We&apos;ll email you a secure link to manage your alerts.</p>
             {error && <p className="text-red-600 text-sm m-0">{error}</p>}
             {result && (
               <div className="text-sm p-3 rounded-lg bg-green-50 border border-green-200">
                 <p className="text-green-800 m-0 font-medium">Check your inbox!</p>
-                <p className="text-green-700 m-0 mt-1">We&apos;ve sent you a verification email. Click the link to activate your subscription.</p>
+                <p className="text-green-700 m-0 mt-1">We&apos;ve sent you an email with a link to set up your food safety alerts.</p>
               </div>
             )}
           </div>
