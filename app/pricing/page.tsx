@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -17,8 +17,6 @@ const tiers = [
       "Aggregated hazards & origins",
       "Full alert details",
     ],
-    cta: "Current Plan",
-    highlighted: false,
     color: "primary",
   },
   {
@@ -34,8 +32,6 @@ const tiers = [
       "Full alert details",
       "Priority email support",
     ],
-    cta: "Upgrade to Weekly",
-    highlighted: true,
     color: "blue",
   },
   {
@@ -51,8 +47,6 @@ const tiers = [
       "Full alert details",
       "Priority email support",
     ],
-    cta: "Upgrade to Daily",
-    highlighted: false,
     color: "purple",
   },
 ];
@@ -62,6 +56,29 @@ function PricingContent() {
   const token = searchParams.get("token");
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [currentFrequency, setCurrentFrequency] = useState<string>("monthly");
+  const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState(true);
+
+  // Fetch current plan on mount
+  useEffect(() => {
+    if (!token) {
+      setLoadingPlan(false);
+      return;
+    }
+
+    fetch(`/api/preferences?token=${encodeURIComponent(token)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.frequency) {
+          setCurrentFrequency(data.frequency);
+        }
+        setHasStripeSubscription(data.hasActiveStripeSubscription || false);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingPlan(false));
+  }, [token]);
 
   const handleUpgrade = async (frequency: string) => {
     if (!token) {
@@ -71,6 +88,7 @@ function PricingContent() {
 
     setLoading(frequency);
     setError(null);
+    setSuccess(null);
 
     try {
       const res = await fetch("/api/checkout", {
@@ -95,6 +113,112 @@ function PricingContent() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!token) {
+      setError("Please access this page from your manage preferences link");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to cancel your subscription? You will be downgraded to the free monthly plan.")) {
+      return;
+    }
+
+    setLoading("cancel");
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Could not cancel subscription");
+      }
+
+      setSuccess(data.message || "Subscription canceled successfully");
+      setCurrentFrequency("monthly");
+      setHasStripeSubscription(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const getButtonForTier = (tierFrequency: string, tierColor: string) => {
+    const isCurrentPlan = tierFrequency === currentFrequency;
+    const isUpgrade =
+      (currentFrequency === "monthly" && (tierFrequency === "weekly" || tierFrequency === "daily")) ||
+      (currentFrequency === "weekly" && tierFrequency === "daily");
+    const isDowngrade = tierFrequency === "monthly" && currentFrequency !== "monthly";
+
+    if (isCurrentPlan) {
+      return (
+        <div className="px-4 py-3 rounded-lg bg-surface border-2 border-primary text-center text-primary font-semibold">
+          Current Plan
+        </div>
+      );
+    }
+
+    if (isDowngrade && hasStripeSubscription) {
+      return (
+        <button
+          onClick={handleCancel}
+          disabled={loading !== null}
+          className={`px-4 py-3 rounded-lg font-semibold transition border-2 border-red-300 text-red-600 hover:bg-red-50 ${
+            loading === "cancel" ? "opacity-70 cursor-wait" : ""
+          }`}
+        >
+          {loading === "cancel" ? "Canceling..." : "Cancel & Downgrade"}
+        </button>
+      );
+    }
+
+    if (isDowngrade && !hasStripeSubscription) {
+      return (
+        <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
+          Free
+        </div>
+      );
+    }
+
+    if (isUpgrade) {
+      return (
+        <button
+          onClick={() => handleUpgrade(tierFrequency)}
+          disabled={loading !== null}
+          className={`px-4 py-3 rounded-lg font-semibold transition ${
+            tierColor === "blue"
+              ? "bg-blue-600 hover:bg-blue-700 text-white"
+              : "bg-purple-600 hover:bg-purple-700 text-white"
+          } ${loading === tierFrequency ? "opacity-70 cursor-wait" : ""}`}
+        >
+          {loading === tierFrequency ? "Loading..." : `Upgrade to ${tierFrequency.charAt(0).toUpperCase() + tierFrequency.slice(1)}`}
+        </button>
+      );
+    }
+
+    // For same-tier paid plans when user is on a higher tier (e.g., user on daily, looking at weekly)
+    return (
+      <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
+        {tierFrequency === "monthly" ? "Free" : `£${tierFrequency === "weekly" ? "7" : "11"}/month`}
+      </div>
+    );
+  };
+
+  if (loadingPlan) {
+    return (
+      <div className="card p-6 md:p-8 max-w-5xl mx-auto">
+        <p className="text-center text-muted">Loading your plan...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="card p-6 md:p-8 max-w-5xl mx-auto space-y-8">
       <div className="text-center space-y-3">
@@ -114,85 +238,78 @@ function PricingContent() {
         </div>
       )}
 
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+          <p className="text-green-700">{success}</p>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-3 gap-6">
-        {tiers.map((tier) => (
-          <div
-            key={tier.name}
-            className={`relative rounded-2xl border-2 p-6 flex flex-col ${
-              tier.highlighted
-                ? "border-blue-500 bg-blue-50/30 shadow-lg scale-[1.02]"
-                : "border-border bg-base"
-            }`}
-          >
-            {tier.highlighted && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  Most Popular
+        {tiers.map((tier) => {
+          const isCurrentPlan = tier.frequency === currentFrequency;
+          return (
+            <div
+              key={tier.name}
+              className={`relative rounded-2xl border-2 p-6 flex flex-col ${
+                isCurrentPlan
+                  ? "border-primary bg-primary/5 shadow-lg scale-[1.02]"
+                  : "border-border bg-base"
+              }`}
+            >
+              {isCurrentPlan && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Your Plan
+                  </span>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <h3 className={`text-xl font-bold ${
+                  tier.color === "blue" ? "text-blue-700" :
+                  tier.color === "purple" ? "text-purple-700" :
+                  "text-ink"
+                }`}>
+                  {tier.name}
+                </h3>
+                <p className="text-muted text-sm mt-1">{tier.description}</p>
+              </div>
+
+              <div className="mb-6">
+                <span className={`text-4xl font-extrabold ${
+                  tier.color === "blue" ? "text-blue-700" :
+                  tier.color === "purple" ? "text-purple-700" :
+                  "text-ink"
+                }`}>
+                  {tier.price}
                 </span>
+                <span className="text-muted text-sm">{tier.priceDetail}</span>
               </div>
-            )}
 
-            <div className="mb-4">
-              <h3 className={`text-xl font-bold ${
-                tier.color === "blue" ? "text-blue-700" :
-                tier.color === "purple" ? "text-purple-700" :
-                "text-ink"
-              }`}>
-                {tier.name}
-              </h3>
-              <p className="text-muted text-sm mt-1">{tier.description}</p>
+              <ul className="space-y-3 mb-6 flex-1">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex gap-2 text-sm">
+                    <svg
+                      className={`w-5 h-5 shrink-0 ${
+                        tier.color === "blue" ? "text-blue-500" :
+                        tier.color === "purple" ? "text-purple-500" :
+                        "text-primary"
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-secondary">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {getButtonForTier(tier.frequency, tier.color)}
             </div>
-
-            <div className="mb-6">
-              <span className={`text-4xl font-extrabold ${
-                tier.color === "blue" ? "text-blue-700" :
-                tier.color === "purple" ? "text-purple-700" :
-                "text-ink"
-              }`}>
-                {tier.price}
-              </span>
-              <span className="text-muted text-sm">{tier.priceDetail}</span>
-            </div>
-
-            <ul className="space-y-3 mb-6 flex-1">
-              {tier.features.map((feature) => (
-                <li key={feature} className="flex gap-2 text-sm">
-                  <svg
-                    className={`w-5 h-5 shrink-0 ${
-                      tier.color === "blue" ? "text-blue-500" :
-                      tier.color === "purple" ? "text-purple-500" :
-                      "text-primary"
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-secondary">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            {tier.frequency === "monthly" ? (
-              <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
-                {token ? "Your Current Plan" : "Free"}
-              </div>
-            ) : (
-              <button
-                onClick={() => handleUpgrade(tier.frequency)}
-                disabled={loading !== null}
-                className={`px-4 py-3 rounded-lg font-semibold transition ${
-                  tier.color === "blue"
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-purple-600 hover:bg-purple-700 text-white"
-                } ${loading === tier.frequency ? "opacity-70 cursor-wait" : ""}`}
-              >
-                {loading === tier.frequency ? "Loading..." : tier.cta}
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="text-center space-y-4 pt-4 border-t border-border">

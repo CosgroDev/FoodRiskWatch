@@ -24,7 +24,7 @@ async function validateManageToken(sb: ReturnType<typeof supabaseServer>, token?
 async function ensureDefaultSubscription(sb: ReturnType<typeof supabaseServer>, userId: string) {
   const { data: sub } = await sb
     .from("subscriptions")
-    .select("id, frequency")
+    .select("id, frequency, stripe_subscription_id, stripe_status")
     .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
@@ -34,7 +34,7 @@ async function ensureDefaultSubscription(sb: ReturnType<typeof supabaseServer>, 
   const { data: created, error } = await sb
     .from("subscriptions")
     .insert({ user_id: userId, tier: "free", frequency: "monthly", timezone: "Europe/London", is_active: true })
-    .select("id, frequency")
+    .select("id, frequency, stripe_subscription_id, stripe_status")
     .single();
   if (error || !created) throw error;
   return created;
@@ -96,6 +96,7 @@ export async function GET(req: NextRequest) {
     frequency: (subscription.frequency as "monthly" | "weekly" | "daily") || "monthly",
     categories: (rules || []).filter((r) => r.rule_type === "category").map((r) => r.rule_value),
     availableCategories,
+    hasActiveStripeSubscription: !!subscription.stripe_subscription_id && subscription.stripe_status === "active",
   };
 
   return NextResponse.json(response);
