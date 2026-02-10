@@ -108,6 +108,20 @@ function getLookbackDays(frequency: string): number {
   }
 }
 
+// Get the start of the lookback period (midnight UTC of N days ago)
+function getLookbackDate(frequency: string): Date {
+  const lookbackDays = getLookbackDays(frequency);
+  const date = new Date();
+
+  // Set to start of today (midnight UTC)
+  date.setUTCHours(0, 0, 0, 0);
+
+  // Go back N days
+  date.setUTCDate(date.getUTCDate() - lookbackDays);
+
+  return date;
+}
+
 export async function GET(req: NextRequest) {
   // Support both custom header (local testing) and Vercel's cron auth
   const customSecret = req.headers.get("x-cron-digest");
@@ -164,10 +178,8 @@ export async function GET(req: NextRequest) {
     // Build filter criteria (only categories now)
     const categoryFilters = new Set(rules.filter((r) => r.rule_type === "category").map((r) => r.rule_value));
 
-    // Get alerts based on subscription frequency
-    const lookbackDays = getLookbackDays(subscription.frequency);
-    const lookbackDate = new Date();
-    lookbackDate.setDate(lookbackDate.getDate() - lookbackDays);
+    // Get alerts based on subscription frequency (full calendar days)
+    const lookbackDate = getLookbackDate(subscription.frequency);
 
     const { data: allAlertRows } = await sb
       .from("alerts_fact")
