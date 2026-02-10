@@ -91,25 +91,53 @@ function PricingContent() {
     setSuccess(null);
 
     try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, frequency }),
-      });
+      // If user already has an active Stripe subscription, use the upgrade endpoint
+      // Otherwise, use checkout for new paid subscribers
+      if (hasStripeSubscription) {
+        const res = await fetch("/api/upgrade", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, frequency }),
+        });
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || "Could not start checkout");
-      }
+        const data = await res.json();
 
-      const { url } = await res.json();
-      if (url) {
-        window.location.href = url;
+        if (!res.ok) {
+          // If upgrade endpoint says we need checkout, fall through to checkout
+          if (data.requiresCheckout) {
+            await handleCheckout(frequency);
+            return;
+          }
+          throw new Error(data.message || "Could not upgrade subscription");
+        }
+
+        setSuccess(data.message || "Plan updated successfully");
+        setCurrentFrequency(frequency);
+      } else {
+        await handleCheckout(frequency);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error");
     } finally {
       setLoading(null);
+    }
+  };
+
+  const handleCheckout = async (frequency: string) => {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, frequency }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || "Could not start checkout");
+    }
+
+    const { url } = await res.json();
+    if (url) {
+      window.location.href = url;
     }
   };
 
@@ -155,7 +183,10 @@ function PricingContent() {
     const isUpgrade =
       (currentFrequency === "monthly" && (tierFrequency === "weekly" || tierFrequency === "daily")) ||
       (currentFrequency === "weekly" && tierFrequency === "daily");
-    const isDowngrade = tierFrequency === "monthly" && currentFrequency !== "monthly";
+    const isDowngradeToFree = tierFrequency === "monthly" && currentFrequency !== "monthly";
+    const isPaidPlanSwitch = hasStripeSubscription &&
+      ((currentFrequency === "daily" && tierFrequency === "weekly") ||
+       (currentFrequency === "weekly" && tierFrequency === "daily"));
 
     if (isCurrentPlan) {
       return (
@@ -165,7 +196,7 @@ function PricingContent() {
       );
     }
 
-    if (isDowngrade && hasStripeSubscription) {
+    if (isDowngradeToFree && hasStripeSubscription) {
       return (
         <button
           onClick={handleCancel}
@@ -179,11 +210,35 @@ function PricingContent() {
       );
     }
 
-    if (isDowngrade && !hasStripeSubscription) {
+    if (isDowngradeToFree && !hasStripeSubscription) {
       return (
         <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
           Free
         </div>
+      );
+    }
+
+    // Switching between paid plans (weekly <-> daily)
+    if (isPaidPlanSwitch) {
+      const isDowngrade = currentFrequency === "daily" && tierFrequency === "weekly";
+      return (
+        <button
+          onClick={() => handleUpgrade(tierFrequency)}
+          disabled={loading !== null}
+          className={`px-4 py-3 rounded-lg font-semibold transition ${
+            isDowngrade
+              ? "border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
+              : tierColor === "blue"
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-purple-600 hover:bg-purple-700 text-white"
+          } ${loading === tierFrequency ? "opacity-70 cursor-wait" : ""}`}
+        >
+          {loading === tierFrequency
+            ? "Updating..."
+            : isDowngrade
+              ? "Switch to Weekly"
+              : `Upgrade to ${tierFrequency.charAt(0).toUpperCase() + tierFrequency.slice(1)}`}
+        </button>
       );
     }
 
@@ -203,7 +258,7 @@ function PricingContent() {
       );
     }
 
-    // For same-tier paid plans when user is on a higher tier (e.g., user on daily, looking at weekly)
+    // Fallback - shouldn't normally be reached
     return (
       <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
         {tierFrequency === "monthly" ? "Free" : `£${tierFrequency === "weekly" ? "7" : "11"}/month`}
