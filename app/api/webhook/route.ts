@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe, FREQUENCY_FROM_PRICE } from "../../../lib/stripe/client";
+import { getStripe, getFrequencyFromPrice } from "../../../lib/stripe/client";
 import { supabaseServer } from "../../../lib/supabase/server";
 import Stripe from "stripe";
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
         const status = subscription.status;
         const priceId = subscription.items.data[0]?.price?.id;
-        const frequency = priceId ? FREQUENCY_FROM_PRICE[priceId] : undefined;
+        const frequency = priceId ? getFrequencyFromPrice(priceId) : undefined;
 
         // Find subscription by stripe_subscription_id
         const { data: sub } = await sb

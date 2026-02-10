@@ -21,8 +21,12 @@ export const PRICE_IDS = {
   daily: process.env.STRIPE_PRICE_DAILY || "",
 };
 
-export const FREQUENCY_FROM_PRICE: Record<string, "weekly" | "daily"> = {};
+// Dynamic lookup to avoid cold start issues with environment variables
+export function getFrequencyFromPrice(priceId: string): "weekly" | "daily" | undefined {
+  const weeklyPriceId = process.env.STRIPE_PRICE_WEEKLY;
+  const dailyPriceId = process.env.STRIPE_PRICE_DAILY;
 
-// Build reverse lookup when prices are loaded
-if (PRICE_IDS.weekly) FREQUENCY_FROM_PRICE[PRICE_IDS.weekly] = "weekly";
-if (PRICE_IDS.daily) FREQUENCY_FROM_PRICE[PRICE_IDS.daily] = "daily";
+  if (priceId === weeklyPriceId) return "weekly";
+  if (priceId === dailyPriceId) return "daily";
+  return undefined;
+}
