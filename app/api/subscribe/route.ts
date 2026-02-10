@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/server";
 import { sendVerificationEmail, sendLoginEmail } from "../../../lib/email/send";
+import { getAppBaseUrl } from "../../../lib/config";
 import crypto from "crypto";
 
 const EMAIL_REGEX = /.+@.+\..+/;
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sb = supabaseServer();
-  const origin = new URL(req.url).origin;
+  const origin = getAppBaseUrl();
 
   // Check if user already exists
   const { data: existingUser } = await sb

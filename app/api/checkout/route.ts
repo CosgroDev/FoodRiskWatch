@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/server";
 import { getStripe, PRICE_IDS } from "../../../lib/stripe/client";
+import { getAppBaseUrl } from "../../../lib/config";
 
 type CheckoutPayload = {
   token?: string;
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   const stripe = getStripe();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || "http://localhost:3000";
+  const baseUrl = getAppBaseUrl();
 
   let customerId = subscription?.stripe_customer_id;
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { supabaseServer } from "../../lib/supabase/server";
 import { sendWelcomeDigestEmail } from "../../lib/email/send";
+import { getAppBaseUrl } from "../../lib/config";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
   // Send welcome digest with last 30 days of alerts (only once)
   if (user?.email && subscriptionId && !welcomeDigestSent) {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || url.origin;
+      const baseUrl = getAppBaseUrl();
       await sendWelcomeDigestEmail(user.email, subscriptionId, baseUrl, sb);
 
       // Mark welcome digest as sent
@@ -111,6 +112,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const manageUrl = `${url.origin}/preferences?token=${manageToken}`;
+  const manageUrl = `${getAppBaseUrl()}/preferences?token=${manageToken}`;
   return NextResponse.redirect(manageUrl);
 }

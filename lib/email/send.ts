@@ -10,6 +10,7 @@ import {
   welcomeDigestEmailText,
 } from "./templates";
 import { supabaseServer } from "../supabase/server";
+import { getAppBaseUrl } from "../config";
 
 type Alert = {
   id: string;
@@ -76,9 +77,7 @@ export async function sendDigestEmail(
   alerts: Alert[],
   manageToken: string
 ): Promise<{ success: boolean; error?: string }> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
+  const baseUrl = getAppBaseUrl();
 
   const manageUrl = `${baseUrl}/preferences?token=${encodeURIComponent(manageToken)}`;
   const unsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${encodeURIComponent(manageToken)}`;
