@@ -56,21 +56,25 @@ export async function POST(req: NextRequest) {
         const priceId = subscription.items.data[0]?.price?.id;
         const frequency = priceId ? getFrequencyFromPrice(priceId) : undefined;
 
+        console.log(`[Webhook] subscription.updated - priceId: ${priceId}, resolved frequency: ${frequency}`);
+
         // Find subscription by stripe_subscription_id
         const { data: sub } = await sb
           .from("subscriptions")
-          .select("id")
+          .select("id, frequency")
           .eq("stripe_subscription_id", subscription.id)
           .single();
 
         if (sub) {
-          const updates: Record<string, unknown> = { stripe_status: status };
-          if (frequency) {
-            updates.frequency = frequency;
-          }
+          // Only update stripe_status, NOT frequency
+          // Frequency is managed by our upgrade/checkout endpoints directly
+          // This prevents race conditions where webhook overwrites API changes
+          await sb
+            .from("subscriptions")
+            .update({ stripe_status: status })
+            .eq("id", sub.id);
 
-          await sb.from("subscriptions").update(updates).eq("id", sub.id);
-          console.log(`[Webhook] Updated subscription ${sub.id} status to ${status}`);
+          console.log(`[Webhook] Updated subscription ${sub.id} status to ${status} (frequency unchanged: ${sub.frequency})`);
         }
         break;
       }
