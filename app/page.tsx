@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useState } from "react";
 
@@ -48,8 +48,8 @@ export default function HomePage() {
         </div>
         <h1 className="text-3xl md:text-[34px] font-extrabold leading-tight">Food safety alerts, tailored to you.</h1>
         <p className="text-muted leading-relaxed max-w-3xl mx-auto md:mx-0">
-          FoodRisk Watch turns public EU RASFF alerts into clean, weekly digests. Filter by product categories
-          and receive alerts with aggregated hazards and origin countries—curated for your QA and supply chain teams.
+          FoodRisk Watch turns public EU RASFF alerts into clean, digests based on subscription tier. Filter by product categories
+          and receive alerts with aggregated hazards and origin countries
         </p>
         <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-1">
           {chips.map((c) => (
