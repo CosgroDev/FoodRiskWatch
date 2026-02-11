@@ -152,7 +152,7 @@ export default function TermsPage() {
         <p className="text-secondary leading-relaxed">
           The RASFF data is sourced from the European Commission and is subject to their
           terms of use. The FoodRisk Watch service, design, and code are the property of
-          CGRV. &quot;RASFF&quot; is a trademark of the European Commission.
+          Food Risk. &quot;RASFF&quot; is a trademark of the European Commission.
         </p>
       </div>
 
@@ -169,7 +169,7 @@ export default function TermsPage() {
         <h2 className="text-xl font-semibold">9. Contact</h2>
         <p className="text-secondary leading-relaxed">
           For questions about these terms, please contact us at{" "}
-          <a href="mailto:dale@cgrv.co.uk" className="text-primary hover:underline">dale@cgrv.co.uk</a>
+          <a href="mailto:info@foodrisk.co.uk" className="text-primary hover:underline">info@foodrisk.co.uk</a>
         </p>
       </div>
 

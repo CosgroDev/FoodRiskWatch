@@ -167,7 +167,7 @@ export default function PrivacyPage() {
         <h2 className="text-xl font-semibold">Contact</h2>
         <p className="text-secondary leading-relaxed">
           For privacy-related enquiries, please contact us at{" "}
-          <a href="mailto:dale@cgrv.co.uk" className="text-primary hover:underline">dale@cgrv.co.uk</a>
+          <a href="mailto:info@foodrisk.co.uk" className="text-primary hover:underline">info@foodrisk.co.uk</a>
         </p>
       </div>
 

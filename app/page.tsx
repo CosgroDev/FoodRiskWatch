@@ -124,8 +124,8 @@ export default function HomePage() {
           Powered by public RASFF data. We are not affiliated with RASFF or the European Commission.
         </p>
         <p className="text-sm text-muted m-0">
-          Developed by <span className="font-semibold text-ink">CGRV</span>. For issues or queries, contact{" "}
-          <a href="mailto:dale@cgrv.co.uk" className="text-primary hover:underline">dale@cgrv.co.uk</a>
+          Developed by <span className="font-semibold text-ink">Food Risk</span>. For issues or queries, contact{" "}
+          <a href="mailto:info@foodrisk.co.uk" className="text-primary hover:underline">info@foodrisk.co.uk</a>
         </p>
       </div>
     </div>
