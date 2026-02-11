@@ -8,7 +8,7 @@ type SubscribeResponse = {
   isExistingUser?: boolean;
 };
 
-const chips = ["Product category filters", "Aggregated hazard alerts", "Origin country tracking", "Weekly digest"];
+const chips = ["Product category filters", "Aggregated hazard alerts", "Origin country tracking", "Flexible digest frequency"];
 
 export default function HomePage() {
   const [email, setEmail] = useState("");
@@ -105,7 +105,6 @@ export default function HomePage() {
           <div className="mt-3 space-y-3">
             {[
               "No login required — secure magic links",
-              "Weekly digest emails with your alerts",
               "Filter by product categories",
               "View all hazards and origin countries per alert",
               "Detailed alert pages with full RASFF data",
@@ -115,6 +114,23 @@ export default function HomePage() {
                 <span className="text-textMuted">{item}</span>
               </div>
             ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="font-semibold text-ink m-0 text-sm mb-3">Choose your digest frequency</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-textMuted">Monthly</span>
+                <span className="text-muted">Free</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-textMuted">Weekly</span>
+                <span className="text-muted">£7/month</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-textMuted">Daily</span>
+                <span className="text-muted">£11/month</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
