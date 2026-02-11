@@ -7,7 +7,7 @@ type SubscribeResponse = {
   manageUrl?: string;
 };
 
-const chips = ["Hazard filters", "Category filters", "Country filters", "Weekly digest"];
+const chips = ["Hazard filters", "Category filters", "Country filters", "E-Mail Report"];
 
 export default function HomePage() {
   const [email, setEmail] = useState("");
@@ -97,12 +97,12 @@ export default function HomePage() {
         <div className="card p-5 border border-border">
           <div className="space-y-2">
             <p className="font-bold text-ink m-0 text-lg">What you get</p>
-            <p className="text-muted m-0 text-sm">Curated signal, ready for your QA or supply teams.</p>
+            <p className="text-muted m-0 text-sm">Clean alerts, ready for your QA or supply teams.</p>
           </div>
           <div className="mt-3 space-y-3">
             {[
-              "No login — magic links for access",
-              "Weekly digest (daily & instant coming soon)",
+              "No login - magic links for access",
+              "Monthly (Free) Weekly, Daily (Paid) Notifications",
               "Preferences for hazards, categories, countries",
               "Powered by public RASFF data (not affiliated)",
             ].map((item) => (
