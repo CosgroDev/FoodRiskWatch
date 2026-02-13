@@ -95,6 +95,9 @@ export async function sendDigestEmail(
 
   const manageUrl = `${baseUrl}/preferences?token=${encodeURIComponent(manageToken)}`;
   const unsubscribeUrl = `${baseUrl}/api/unsubscribe?token=${encodeURIComponent(manageToken)}`;
+  const dashboardUrl = frequency === "daily"
+    ? `${baseUrl}/dashboard?token=${encodeURIComponent(manageToken)}`
+    : undefined;
   const period = getSubjectPeriod(frequency);
 
   try {
@@ -102,8 +105,8 @@ export async function sendDigestEmail(
       from: EMAIL_FROM,
       to,
       subject: `FoodRisk Watch: ${alerts.length} alert${alerts.length === 1 ? "" : "s"} ${period}`,
-      html: digestEmailHtml(alerts, manageUrl, unsubscribeUrl, baseUrl, frequency),
-      text: digestEmailText(alerts, manageUrl, unsubscribeUrl, baseUrl, frequency),
+      html: digestEmailHtml(alerts, manageUrl, unsubscribeUrl, baseUrl, frequency, dashboardUrl),
+      text: digestEmailText(alerts, manageUrl, unsubscribeUrl, baseUrl, frequency, dashboardUrl),
       headers: {
         "X-Entity-Ref-ID": `digest-${Date.now()}`,
       },

@@ -136,9 +136,11 @@ export function digestEmailHtml(
   manageUrl: string,
   unsubscribeUrl: string,
   baseUrl: string,
-  frequency: string = "weekly"
+  frequency: string = "weekly",
+  dashboardUrl?: string
 ): string {
   const { period, adjective } = getPeriodText(frequency);
+  const isDaily = frequency === "daily";
   const alertRows = alerts
     .map((alert) => {
       const date = alert.alert_date
@@ -207,6 +209,13 @@ export function digestEmailHtml(
     <p style="color: #64748b; margin-bottom: 0;">Based on your filter preferences, here are the food safety alerts that match your criteria.</p>
   </div>
 
+  ${isDaily && dashboardUrl ? `
+  <div style="background: #faf5ff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e9d5ff; text-align: center;">
+    <p style="margin: 0 0 12px; color: #6b21a8; font-weight: 500;">View trends, filter alerts, and explore your data</p>
+    <a href="${dashboardUrl}" style="background: #9333ea; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Open Dashboard</a>
+  </div>
+  ` : ''}
+
   <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
     <tbody>
       ${alertRows}
@@ -235,9 +244,11 @@ export function digestEmailText(
   manageUrl: string,
   unsubscribeUrl: string,
   baseUrl: string,
-  frequency: string = "weekly"
+  frequency: string = "weekly",
+  dashboardUrl?: string
 ): string {
   const { period, adjective } = getPeriodText(frequency);
+  const isDaily = frequency === "daily";
   const alertList = alerts
     .map((alert) => {
       const date = alert.alert_date
@@ -256,13 +267,22 @@ export function digestEmailText(
     })
     .join("\n\n");
 
+  const dashboardSection = isDaily && dashboardUrl ? `
+VIEW YOUR DASHBOARD
+View trends, filter alerts, and explore your data:
+${dashboardUrl}
+
+---
+
+` : '';
+
   return `
 FoodRisk Watch - Your ${adjective} Digest
 
 ${alerts.length} alert${alerts.length === 1 ? "" : "s"} ${period}
 
 Based on your filter preferences, here are the food safety alerts that match your criteria:
-
+${dashboardSection}
 ${alertList}
 
 ---
