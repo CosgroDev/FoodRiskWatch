@@ -296,6 +296,83 @@ Data sourced from the EU RASFF (Rapid Alert System for Food and Feed)
   `.trim();
 }
 
+export function noAlertsEmailHtml(
+  manageUrl: string,
+  dashboardUrl?: string
+): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Daily FoodRisk Watch Update</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #16a34a; margin: 0;">FoodRisk Watch</h1>
+    <p style="color: #64748b; margin: 5px 0 0;">Your Daily Food Safety Update</p>
+  </div>
+
+  <div style="background: #f0fdf4; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #bbf7d0; text-align: center;">
+    <h2 style="margin-top: 0; color: #166534;">All clear today</h2>
+    <p style="color: #166534; margin-bottom: 0;">
+      No new food safety alerts matched your filters in the last 24 hours. We're still monitoring and will notify you as soon as new alerts appear.
+    </p>
+  </div>
+
+  ${dashboardUrl ? `
+  <div style="background: #faf5ff; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #e9d5ff; text-align: center;">
+    <p style="margin: 0 0 12px; color: #6b21a8; font-weight: 500;">Review historical trends and past alerts</p>
+    <a href="${dashboardUrl}" style="background: #9333ea; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Open Dashboard</a>
+  </div>
+  ` : ''}
+
+  <div style="text-align: center; margin-top: 30px;">
+    <a href="${manageUrl}" style="color: #16a34a; text-decoration: none; font-weight: 500;">Manage preferences</a>
+  </div>
+
+  <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+
+  <p style="color: #94a3b8; font-size: 12px; text-align: center;">
+    FoodRisk Watch - Keeping you informed about food safety in Europe<br>
+    Data sourced from the EU RASFF (Rapid Alert System for Food and Feed)
+  </p>
+</body>
+</html>
+  `.trim();
+}
+
+export function noAlertsEmailText(
+  manageUrl: string,
+  dashboardUrl?: string
+): string {
+  const dashboardSection = dashboardUrl ? `
+VIEW YOUR DASHBOARD
+Review historical trends and past alerts:
+${dashboardUrl}
+
+---
+
+` : '';
+
+  return `
+FoodRisk Watch - Your Daily Update
+
+ALL CLEAR TODAY
+
+No new food safety alerts matched your filters in the last 24 hours. We're still monitoring and will notify you as soon as new alerts appear.
+${dashboardSection}
+---
+
+Manage preferences: ${manageUrl}
+
+--
+FoodRisk Watch - Keeping you informed about food safety in Europe
+Data sourced from the EU RASFF (Rapid Alert System for Food and Feed)
+  `.trim();
+}
+
 export function welcomeDigestEmailHtml(
   alerts: Alert[],
   manageUrl: string,

@@ -6,6 +6,8 @@ import {
   loginEmailText,
   digestEmailHtml,
   digestEmailText,
+  noAlertsEmailHtml,
+  noAlertsEmailText,
   welcomeDigestEmailHtml,
   welcomeDigestEmailText,
 } from "./templates";
@@ -120,6 +122,38 @@ export async function sendDigestEmail(
     return { success: true };
   } catch (err) {
     console.error("[Email] Exception sending digest email:", err);
+    return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+}
+
+export async function sendNoAlertsEmail(
+  to: string,
+  manageToken: string
+): Promise<{ success: boolean; error?: string }> {
+  const baseUrl = getAppBaseUrl();
+  const manageUrl = `${baseUrl}/preferences?token=${encodeURIComponent(manageToken)}`;
+  const dashboardUrl = `${baseUrl}/dashboard?token=${encodeURIComponent(manageToken)}`;
+
+  try {
+    const { error } = await getResend().emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject: "FoodRisk Watch: All clear today",
+      html: noAlertsEmailHtml(manageUrl, dashboardUrl),
+      text: noAlertsEmailText(manageUrl, dashboardUrl),
+      headers: {
+        "X-Entity-Ref-ID": `no-alerts-${Date.now()}`,
+      },
+    });
+
+    if (error) {
+      console.error("[Email] Failed to send no-alerts email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("[Email] Exception sending no-alerts email:", err);
     return { success: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
 }

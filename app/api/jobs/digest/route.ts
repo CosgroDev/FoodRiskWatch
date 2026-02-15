@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabase/server";
-import { sendDigestEmail } from "../../../../lib/email/send";
+import { sendDigestEmail, sendNoAlertsEmail } from "../../../../lib/email/send";
 import { normalizeCategory } from "../../../../lib/normalize";
 
 type Subscription = {
@@ -187,46 +187,79 @@ export async function GET(req: NextRequest) {
       .gte("alert_date", lookbackDate.toISOString())
       .returns<AlertFactRow[]>();
 
-    if (!allAlertRows || allAlertRows.length === 0) {
-      continue;
+    // Determine if there are new alerts for this subscriber
+    let newAlerts: AggregatedAlert[] = [];
+
+    if (allAlertRows && allAlertRows.length > 0) {
+      // Filter rows by category before aggregating. If no filters set, include all alerts.
+      const filteredRows = categoryFilters.size > 0
+        ? allAlertRows.filter((row) => {
+            const normalizedCategory = normalizeCategory(row.product_category);
+            return normalizedCategory && categoryFilters.has(normalizedCategory);
+          })
+        : allAlertRows;
+
+      // Aggregate rows by raw_id to combine hazards and countries
+      const alerts = aggregateAlerts(filteredRows);
+
+      if (alerts.length > 0) {
+        // Get already delivered alert IDs for this subscription
+        const { data: existingDeliveries } = await sb
+          .from("deliveries")
+          .select("id")
+          .eq("subscription_id", subscription.id);
+
+        const deliveryIds = (existingDeliveries || []).map((d) => d.id);
+
+        let deliveredAlertIds: Set<string> = new Set();
+        if (deliveryIds.length > 0) {
+          const { data: deliveredItems } = await sb
+            .from("delivery_items")
+            .select("alerts_fact_id")
+            .in("delivery_id", deliveryIds);
+          deliveredAlertIds = new Set((deliveredItems || []).map((i) => i.alerts_fact_id));
+        }
+
+        // Filter out already delivered alerts (check if any of the fact_ids were delivered)
+        newAlerts = alerts.filter((a) => !a.fact_ids.some(id => deliveredAlertIds.has(id)));
+      }
     }
 
-    // Filter rows by category before aggregating. If no filters set, include all alerts.
-    const filteredRows = categoryFilters.size > 0
-      ? allAlertRows.filter((row) => {
-          const normalizedCategory = normalizeCategory(row.product_category);
-          return normalizedCategory && categoryFilters.has(normalizedCategory);
-        })
-      : allAlertRows;
-
-    // Aggregate rows by raw_id to combine hazards and countries
-    const alerts = aggregateAlerts(filteredRows);
-
-    if (alerts.length === 0) {
-      continue;
-    }
-
-    // Get already delivered alert IDs for this subscription
-    const { data: existingDeliveries } = await sb
-      .from("deliveries")
-      .select("id")
-      .eq("subscription_id", subscription.id);
-
-    const deliveryIds = (existingDeliveries || []).map((d) => d.id);
-
-    let deliveredAlertIds: Set<string> = new Set();
-    if (deliveryIds.length > 0) {
-      const { data: deliveredItems } = await sb
-        .from("delivery_items")
-        .select("alerts_fact_id")
-        .in("delivery_id", deliveryIds);
-      deliveredAlertIds = new Set((deliveredItems || []).map((i) => i.alerts_fact_id));
-    }
-
-    // Filter out already delivered alerts (check if any of the fact_ids were delivered)
-    const newAlerts = alerts.filter((a) => !a.fact_ids.some(id => deliveredAlertIds.has(id)));
-
+    // If no new alerts: send "all clear" email for daily subscribers, skip for others
     if (newAlerts.length === 0) {
+      if (subscription.frequency === "daily") {
+        // Get manage token for the no-alerts email
+        const { data: noAlertTokenData } = await sb
+          .from("email_tokens")
+          .select("token")
+          .eq("user_id", subscription.user_id)
+          .eq("purpose", "manage")
+          .gt("expires_at", new Date().toISOString())
+          .order("expires_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        const noAlertToken = noAlertTokenData?.token;
+        if (noAlertToken) {
+          const emailResult = await sendNoAlertsEmail(
+            subscription.users?.email || "",
+            noAlertToken
+          );
+          if (emailResult.success) {
+            console.log(`[Digest] Sent 'all clear' email to ${subscription.users?.email} (daily)`);
+            results.push({
+              email: subscription.users?.email || "unknown",
+              alertCount: 0,
+              deliveryId: "",
+              frequency: subscription.frequency,
+            });
+          } else {
+            console.error(`[Digest] Failed to send 'all clear' to ${subscription.users?.email}: ${emailResult.error}`);
+          }
+        } else {
+          console.error(`[Digest] No manage token for user ${subscription.user_id}`);
+        }
+      }
       continue;
     }
 
