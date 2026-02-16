@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "../../../lib/supabase/server";
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-
 async function validateDashboardToken(sb: ReturnType<typeof supabaseServer>, token?: string) {
   if (!token) return { error: "Missing token" as const };
 
   const { data, error } = await sb
     .from("email_tokens")
-    .select("user_id, purpose, expires_at, created_at")
+    .select("user_id, purpose, expires_at")
     .eq("token", token)
     .single();
 
@@ -16,16 +14,9 @@ async function validateDashboardToken(sb: ReturnType<typeof supabaseServer>, tok
     return { error: "Invalid token" as const };
   }
 
-  // Check standard expiry
+  // Check token expiry
   if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    return { error: "Token expired" as const };
-  }
-
-  // For dashboard, also enforce 3-day freshness
-  const createdAt = new Date(data.created_at || data.expires_at);
-  const tokenAge = Date.now() - createdAt.getTime();
-  if (tokenAge > THREE_DAYS_MS) {
-    return { error: "Dashboard access expired. Please request a new link from your email." as const };
+    return { error: "Token expired. Please request a new link from the homepage." as const };
   }
 
   return { userId: data.user_id };
