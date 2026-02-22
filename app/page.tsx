@@ -51,6 +51,53 @@ const sampleAlerts = [
   { id: 3, product: "Olive oil", hazard: "Pesticide residue", origin: "Spain", date: "2024-01-13", selected: false },
 ];
 
+const pricingTiers = [
+  {
+    name: "Monthly",
+    price: "Free",
+    priceDetail: "",
+    frequency: "monthly",
+    description: "Get started with monthly food safety digests",
+    features: [
+      "Monthly digest on the 1st",
+      "Filter by product categories",
+      "Aggregated hazards & origins",
+      "Full alert details",
+    ],
+    highlighted: false,
+  },
+  {
+    name: "Weekly",
+    price: "£7",
+    priceDetail: "/month",
+    frequency: "weekly",
+    description: "Stay informed with weekly updates",
+    features: [
+      "Weekly digest every Monday",
+      "Filter by product categories",
+      "Aggregated hazards & origins",
+      "Full alert details",
+      "Priority email support",
+    ],
+    highlighted: true,
+  },
+  {
+    name: "Daily",
+    price: "£11",
+    priceDetail: "/month",
+    frequency: "daily",
+    description: "Never miss an alert with daily updates",
+    features: [
+      "Daily digest every morning",
+      "Filter by product categories",
+      "Aggregated hazards & origins",
+      "Full alert details",
+      "Priority email support",
+    ],
+    highlighted: false,
+  },
+];
+
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [result, setResult] = useState<SubscribeResponse | null>(null);
@@ -118,6 +165,68 @@ export default function HomePage() {
             <FeatureCard key={feature.title} title={feature.title} description={feature.description} />
           ))}
         </div>
+      </Section>
+
+      {/* Pricing Section */}
+      <Section id="pricing">
+        <SectionHeader
+          title="Simple, transparent pricing"
+          subtitle="All plans include the same powerful features. Choose how often you want to receive your food safety digest."
+          centered
+        />
+        <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
+          {pricingTiers.map((tier) => (
+            <div
+              key={tier.name}
+              className={`relative rounded-card border-2 p-6 flex flex-col transition-all duration-200 ${
+                tier.highlighted
+                  ? "border-primary bg-primary/5 shadow-pop scale-[1.02]"
+                  : "border-border bg-surface hover:border-primary/50 hover:shadow-soft"
+              }`}
+            >
+              {tier.highlighted && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+                    Most Popular
+                  </span>
+                </div>
+              )}
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-text">{tier.name}</h3>
+                <p className="text-textMuted text-sm mt-1">{tier.description}</p>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-extrabold text-text">{tier.price}</span>
+                <span className="text-textMuted text-sm">{tier.priceDetail}</span>
+              </div>
+              <ul className="space-y-3 mb-6 flex-1">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex gap-2 text-sm">
+                    <svg
+                      className="w-5 h-5 shrink-0 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-secondary">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="#get-started"
+                className={tier.highlighted ? "btn-primary" : "btn-muted w-full text-center"}
+              >
+                {tier.price === "Free" ? "Get started free" : "Start with free trial"}
+              </a>
+            </div>
+          ))}
+        </div>
+        <p className="text-center text-sm text-textMuted mt-6">
+          Start free, upgrade anytime. No credit card required.
+        </p>
       </Section>
 
       {/* Authentication Section */}
