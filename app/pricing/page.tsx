@@ -17,7 +17,6 @@ const tiers = [
       "Aggregated hazards & origins",
       "Full alert details",
     ],
-    color: "primary",
   },
   {
     name: "Weekly",
@@ -32,7 +31,6 @@ const tiers = [
       "Full alert details",
       "Priority email support",
     ],
-    color: "blue",
   },
   {
     name: "Daily",
@@ -47,7 +45,6 @@ const tiers = [
       "Full alert details",
       "Priority email support",
     ],
-    color: "purple",
   },
 ];
 
@@ -178,7 +175,7 @@ function PricingContent() {
     }
   };
 
-  const getButtonForTier = (tierFrequency: string, tierColor: string) => {
+  const getButtonForTier = (tierFrequency: string) => {
     const isCurrentPlan = tierFrequency === currentFrequency;
     const isUpgrade =
       (currentFrequency === "monthly" && (tierFrequency === "weekly" || tierFrequency === "daily")) ||
@@ -201,7 +198,7 @@ function PricingContent() {
         <button
           onClick={handleCancel}
           disabled={loading !== null}
-          className={`px-4 py-3 rounded-lg font-semibold transition border-2 border-red-300 text-red-600 hover:bg-red-50 ${
+          className={`px-4 py-3 rounded-lg font-semibold transition border-2 border-danger/50 text-danger hover:bg-danger/5 ${
             loading === "cancel" ? "opacity-70 cursor-wait" : ""
           }`}
         >
@@ -212,7 +209,7 @@ function PricingContent() {
 
     if (isDowngradeToFree && !hasStripeSubscription) {
       return (
-        <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
+        <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-textMuted font-medium">
           Free
         </div>
       );
@@ -227,10 +224,8 @@ function PricingContent() {
           disabled={loading !== null}
           className={`px-4 py-3 rounded-lg font-semibold transition ${
             isDowngrade
-              ? "border-2 border-blue-300 text-blue-600 hover:bg-blue-50"
-              : tierColor === "blue"
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-purple-600 hover:bg-purple-700 text-white"
+              ? "border-2 border-tint3 text-primary hover:bg-tint4/30"
+              : "bg-primary hover:bg-primaryDark text-onPrimary"
           } ${loading === tierFrequency ? "opacity-70 cursor-wait" : ""}`}
         >
           {loading === tierFrequency
@@ -247,11 +242,9 @@ function PricingContent() {
         <button
           onClick={() => handleUpgrade(tierFrequency)}
           disabled={loading !== null}
-          className={`px-4 py-3 rounded-lg font-semibold transition ${
-            tierColor === "blue"
-              ? "bg-blue-600 hover:bg-blue-700 text-white"
-              : "bg-purple-600 hover:bg-purple-700 text-white"
-          } ${loading === tierFrequency ? "opacity-70 cursor-wait" : ""}`}
+          className={`px-4 py-3 rounded-lg font-semibold transition bg-primary hover:bg-primaryDark text-onPrimary ${
+            loading === tierFrequency ? "opacity-70 cursor-wait" : ""
+          }`}
         >
           {loading === tierFrequency ? "Loading..." : `Upgrade to ${tierFrequency.charAt(0).toUpperCase() + tierFrequency.slice(1)}`}
         </button>
@@ -260,7 +253,7 @@ function PricingContent() {
 
     // Fallback - shouldn't normally be reached
     return (
-      <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-muted font-medium">
+      <div className="px-4 py-3 rounded-lg bg-surface border border-border text-center text-textMuted font-medium">
         {tierFrequency === "monthly" ? "Free" : `£${tierFrequency === "weekly" ? "7" : "11"}/month`}
       </div>
     );
@@ -269,7 +262,7 @@ function PricingContent() {
   if (loadingPlan) {
     return (
       <div className="card p-6 md:p-8 max-w-5xl mx-auto">
-        <p className="text-center text-muted">Loading your plan...</p>
+        <p className="text-center text-textMuted">Loading your plan...</p>
       </div>
     );
   }
@@ -281,21 +274,21 @@ function PricingContent() {
           <span className="h-2 w-2 rounded-full bg-primary" />
           Pricing
         </div>
-        <h1 className="text-3xl font-bold">Choose your alert frequency</h1>
-        <p className="text-muted max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold text-text">Choose your alert frequency</h1>
+        <p className="text-textMuted max-w-2xl mx-auto">
           All plans include the same powerful features. Choose how often you want to receive your food safety digest.
         </p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-danger/10 border border-danger/30 rounded-lg p-4 text-center">
+          <p className="text-danger">{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <p className="text-green-700">{success}</p>
+        <div className="bg-success/10 border border-success/30 rounded-lg p-4 text-center">
+          <p className="text-success">{success}</p>
         </div>
       )}
 
@@ -307,52 +300,37 @@ function PricingContent() {
               key={tier.name}
               className={`relative rounded-2xl border-2 p-6 flex flex-col ${
                 isCurrentPlan
-                  ? "border-primary bg-primary/5 shadow-lg scale-[1.02]"
-                  : "border-border bg-base"
+                  ? "border-primary bg-primary/5 shadow-pop scale-[1.02]"
+                  : "border-border bg-base hover:border-tint3"
               }`}
             >
               {isCurrentPlan && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <span className="bg-primary text-onPrimary text-xs font-bold px-3 py-1 rounded-full">
                     Your Plan
                   </span>
                 </div>
               )}
 
               <div className="mb-4">
-                <h3 className={`text-xl font-bold ${
-                  tier.color === "blue" ? "text-blue-700" :
-                  tier.color === "purple" ? "text-purple-700" :
-                  "text-ink"
-                }`}>
-                  {tier.name}
-                </h3>
-                <p className="text-muted text-sm mt-1">{tier.description}</p>
+                <h3 className="text-xl font-bold text-text">{tier.name}</h3>
+                <p className="text-textMuted text-sm mt-1">{tier.description}</p>
               </div>
 
               <div className="mb-6">
-                <span className={`text-4xl font-extrabold ${
-                  tier.color === "blue" ? "text-blue-700" :
-                  tier.color === "purple" ? "text-purple-700" :
-                  "text-ink"
-                }`}>
-                  {tier.price}
-                </span>
-                <span className="text-muted text-sm">{tier.priceDetail}</span>
+                <span className="text-4xl font-extrabold text-primary">{tier.price}</span>
+                <span className="text-textMuted text-sm">{tier.priceDetail}</span>
               </div>
 
               <ul className="space-y-3 mb-6 flex-1">
                 {tier.features.map((feature) => (
                   <li key={feature} className="flex gap-2 text-sm">
                     <svg
-                      className={`w-5 h-5 shrink-0 ${
-                        tier.color === "blue" ? "text-blue-500" :
-                        tier.color === "purple" ? "text-purple-500" :
-                        "text-primary"
-                      }`}
+                      className="w-5 h-5 shrink-0 text-primary"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
+                      aria-hidden="true"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -361,7 +339,7 @@ function PricingContent() {
                 ))}
               </ul>
 
-              {getButtonForTier(tier.frequency, tier.color)}
+              {getButtonForTier(tier.frequency)}
             </div>
           );
         })}

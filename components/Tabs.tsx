@@ -49,7 +49,7 @@ export function Tabs({ tabs, children, defaultTab }: TabsProps) {
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
               activeTab === tab.id
-                ? "bg-primary text-white shadow-pop"
+                ? "bg-primary text-onPrimary shadow-pop"
                 : "text-secondary hover:bg-surface hover:text-text"
             }`}
           >

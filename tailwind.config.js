@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   content: [
     "./app/**/*.{js,ts,jsx,tsx}",
     "./lib/**/*.{js,ts,jsx,tsx}",
@@ -7,26 +7,39 @@
   theme: {
     extend: {
       colors: {
-        base: "#F7F9FC",
+        // Primary blue palette
+        primary: "#284ED5",
+        primaryDark: "#2441BB",
+        primaryDeeper: "#223DB6",
+        primaryLight: "#4F6FD9",
+        tint2: "#6D8CE3",
+        tint3: "#93ABE9",
+        tint4: "#B3C6F0",
+        onPrimary: "#F8FAFD",
+
+        // Neutrals
+        base: "#F8FAFD",
         surface: "#FFFFFF",
-        border: "#E5EAF1",
-        primary: "#0F766E",
-        primaryHover: "#115E59",
-        secondary: "#334155",
-        text: "#0F172A",
-        textMuted: "#475569",
+        border: "#B3C6F0",
+        text: "#343636",
+        textMuted: "#9EA6B2",
+        secondary: "#343636",
+
+        // Semantic colors (kept for alerts/status)
         success: "#16A34A",
         warning: "#F59E0B",
         danger: "#DC2626",
-        info: "#0284C7",
-        focus: "#22C55E",
+        info: "#284ED5",
       },
       boxShadow: {
-        soft: "0 10px 26px rgba(15,23,42,0.06)",
-        pop: "0 12px 28px rgba(15,118,110,0.25)",
+        soft: "0 10px 26px rgba(40,78,213,0.08)",
+        pop: "0 12px 28px rgba(40,78,213,0.20)",
       },
       borderRadius: {
         card: "12px",
+      },
+      backgroundImage: {
+        "hero-gradient": "linear-gradient(180deg, #284ED5 0%, #2441BB 100%)",
       },
     },
   },

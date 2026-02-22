@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -19,36 +19,51 @@ main {
   @apply bg-surface border border-border rounded-card shadow-soft backdrop-blur-sm;
 }
 
+/* Primary Button - blue bg, white text */
 .btn-primary {
-  @apply inline-flex items-center justify-center w-full rounded-xl border border-primary bg-gradient-to-br from-primaryHover to-primary text-white font-extrabold px-4 py-3 shadow-[0_12px_28px_rgba(15,118,110,0.28)] transition-transform duration-150 ease-out;
+  @apply inline-flex items-center justify-center w-full rounded-xl border border-primary bg-primary text-onPrimary font-extrabold px-4 py-3 shadow-pop transition-all duration-150 ease-out;
 }
 
 .btn-primary:hover {
-  @apply -translate-y-px bg-primary shadow-[0_12px_22px_rgba(17,94,89,0.25)];
+  @apply -translate-y-px bg-primaryDark border-primaryDark;
+}
+
+.btn-primary:active {
+  @apply translate-y-0 bg-primaryDeeper border-primaryDeeper;
+}
+
+.btn-primary:focus {
+  @apply outline-none ring-2 ring-tint3 ring-offset-2;
 }
 
 .btn-primary:disabled {
   @apply opacity-65 cursor-not-allowed shadow-none translate-y-0;
 }
 
+/* Secondary/Muted Button - light bg, primary text */
 .btn-muted {
-  @apply inline-flex items-center justify-center rounded-xl border border-border bg-gradient-to-br from-base to-surface text-secondary font-bold px-4 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.05)] transition-transform duration-150 ease-out;
+  @apply inline-flex items-center justify-center rounded-xl border border-tint3 bg-tint4/30 text-primary font-bold px-4 py-2.5 shadow-soft transition-all duration-150 ease-out;
 }
 
 .btn-muted:hover {
-  @apply -translate-y-px shadow-[0_8px_18px_rgba(15,23,42,0.08)] bg-surface;
+  @apply -translate-y-px bg-tint4/50 border-tint2;
 }
 
 .btn-muted:active {
-  @apply translate-y-0 shadow-[0_4px_10px_rgba(15,23,42,0.05)];
+  @apply translate-y-0 bg-tint4/70;
 }
 
+.btn-muted:focus {
+  @apply outline-none ring-2 ring-tint3 ring-offset-2;
+}
+
+/* Form inputs */
 input, select {
   @apply w-full rounded-xl border border-border bg-white text-text px-3 py-3 outline-none transition duration-150 ease-out;
 }
 
 input:focus, select:focus {
-  @apply ring-2 border-primary ring-[color:rgba(34,197,94,0.35)];
+  @apply ring-2 border-primary ring-tint3/50;
 }
 
 label {
@@ -57,4 +72,26 @@ label {
 
 small {
   @apply text-sm text-textMuted;
+}
+
+/* Links on light backgrounds */
+a {
+  @apply text-primary;
+}
+
+a:hover {
+  @apply text-primaryDark underline;
+}
+
+/* Utility for text on blue backgrounds */
+.on-primary {
+  @apply text-onPrimary;
+}
+
+.on-primary a {
+  @apply text-onPrimary underline-offset-2;
+}
+
+.on-primary a:hover {
+  @apply underline;
 }

@@ -186,7 +186,7 @@ export default function HomePage() {
             >
               {tier.highlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <span className="bg-primary text-onPrimary text-xs font-bold px-3 py-1 rounded-full">
                     Most Popular
                   </span>
                 </div>
@@ -264,14 +264,14 @@ export default function HomePage() {
                 </p>
               )}
               {result && (
-                <div className="p-4 rounded-lg bg-green-50 border border-green-200" role="status">
-                  <p className="text-green-800 font-medium text-center">Check your inbox!</p>
+                <div className="p-4 rounded-lg bg-success/10 border border-success/30" role="status">
+                  <p className="text-success font-medium text-center">Check your inbox!</p>
                   {result.isExistingUser ? (
-                    <p className="text-green-700 text-sm text-center mt-1">
+                    <p className="text-success/80 text-sm text-center mt-1">
                       Welcome back! We&apos;ve sent you a link to manage your preferences.
                     </p>
                   ) : (
-                    <p className="text-green-700 text-sm text-center mt-1">
+                    <p className="text-success/80 text-sm text-center mt-1">
                       We&apos;ve sent you an email with a link to set up your alerts.
                     </p>
                   )}
@@ -405,7 +405,7 @@ export default function HomePage() {
                           key={cat.name}
                           className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-150 ${
                             cat.active
-                              ? "bg-primary text-white border-primary"
+                              ? "bg-primary text-onPrimary border-primary"
                               : "bg-surface text-secondary border-border hover:border-primary"
                           }`}
                         >
