@@ -14,6 +14,13 @@ type ParsedFact = {
   link?: string | null;
 };
 
+type RasffPagePayload = {
+  value?: RawRecord[];
+  records?: RawRecord[];
+  "@odata.nextLink"?: string;
+  nextLink?: string;
+};
+
 const RASFF_URL =
   "https://api.datalake.sante.service.ec.europa.eu/rasff/irasff-general-info-view?format=json&api-version=v1.0";
 
@@ -127,15 +134,15 @@ export async function POST(req: NextRequest) {
 
   while (nextUrl && page < PAGE_LIMIT) {
     page += 1;
-    const res = await fetch(nextUrl);
-    if (!res.ok) {
-      console.error("RASFF fetch failed", res.status, await res.text());
+    const response: Response = await fetch(nextUrl);
+    if (!response.ok) {
+      console.error("RASFF fetch failed", response.status, await response.text());
       break;
     }
 
-    const json = await res.json();
-    const records: RawRecord[] = json.value || json.records || [];
-    nextUrl = json["@odata.nextLink"] || json.nextLink || null;
+    const pagePayload: RasffPagePayload = await response.json();
+    const records: RawRecord[] = pagePayload.value || pagePayload.records || [];
+    nextUrl = pagePayload["@odata.nextLink"] || pagePayload.nextLink || null;
 
     for (const record of records) {
       console.log("Ingesting record keys", Object.keys(record));
