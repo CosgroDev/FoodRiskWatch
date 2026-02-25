@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const hazardOptions = ["Salmonella", "Listeria", "E.coli", "Mycotoxin", "Allergen", "Physical contaminant"];
@@ -70,7 +70,7 @@ function OptionPills({
   );
 }
 
-export default function PreferencesPage() {
+function PreferencesContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || undefined;
   const [loading, setLoading] = useState(false);
@@ -201,3 +201,19 @@ export default function PreferencesPage() {
   );
 }
 
+export default function PreferencesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="content-wrap">
+          <div className="card p-6 max-w-xl">
+            <h1 className="text-xl font-bold">Loading...</h1>
+            <p className="text-slate-600">Preparing your preferences page.</p>
+          </div>
+        </div>
+      }
+    >
+      <PreferencesContent />
+    </Suspense>
+  );
+}
