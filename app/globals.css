@@ -8,23 +8,44 @@
 }
 
 body {
-  @apply bg-base text-text m-0 min-h-screen antialiased;
-}
-
-main {
-  @apply max-w-5xl mx-auto px-5 md:px-6 py-8 md:py-10;
+  @apply bg-slate-50 text-slate-900 m-0 min-h-screen antialiased;
+  font-family: "Aptos", "Segoe UI", "Helvetica Neue", Arial, system-ui, -apple-system, sans-serif;
 }
 
 .card {
-  @apply bg-surface border border-border rounded-card shadow-soft backdrop-blur-sm;
+  @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+}
+
+.content-wrap {
+  @apply max-w-6xl mx-auto px-5 md:px-6 py-8 md:py-10;
+}
+
+.beta-bar {
+  @apply bg-blue-600 text-white text-xs px-6 py-2 text-center font-medium;
+}
+
+.site-header {
+  @apply border-b border-slate-200 bg-white/90 backdrop-blur;
+}
+
+.site-header-inner {
+  @apply h-14 max-w-6xl mx-auto px-5 md:px-6 flex items-center justify-between gap-4;
+}
+
+.brand-mark {
+  @apply h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm font-black;
+}
+
+.icon-badge {
+  @apply h-8 w-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center;
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center w-full rounded-xl border border-primary bg-gradient-to-br from-primaryHover to-primary text-white font-extrabold px-4 py-3 shadow-[0_12px_28px_rgba(15,118,110,0.28)] transition-transform duration-150 ease-out;
+  @apply inline-flex items-center justify-center w-full rounded-xl border border-blue-700 bg-blue-600 text-white font-bold px-4 py-3 shadow-[0_10px_22px_rgba(37,99,235,0.35)] transition duration-150 ease-out;
 }
 
 .btn-primary:hover {
-  @apply -translate-y-px bg-primary shadow-[0_12px_22px_rgba(17,94,89,0.25)];
+  @apply -translate-y-px bg-blue-700;
 }
 
 .btn-primary:disabled {
@@ -32,29 +53,33 @@ main {
 }
 
 .btn-muted {
-  @apply inline-flex items-center justify-center rounded-xl border border-border bg-gradient-to-br from-base to-surface text-secondary font-bold px-4 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.05)] transition-transform duration-150 ease-out;
+  @apply inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 font-semibold px-4 py-2 transition duration-150;
 }
 
 .btn-muted:hover {
-  @apply -translate-y-px shadow-[0_8px_18px_rgba(15,23,42,0.08)] bg-surface;
+  @apply bg-slate-100;
 }
 
 .btn-muted:active {
-  @apply translate-y-0 shadow-[0_4px_10px_rgba(15,23,42,0.05)];
+  @apply bg-slate-200;
 }
 
-input, select {
-  @apply w-full rounded-xl border border-border bg-white text-text px-3 py-3 outline-none transition duration-150 ease-out;
+input,
+select {
+  @apply w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-3 outline-none transition duration-150 ease-out;
 }
 
-input:focus, select:focus {
-  @apply ring-2 border-primary ring-[color:rgba(34,197,94,0.35)];
+input:focus,
+select:focus {
+  @apply ring-2 border-blue-500 ring-blue-200;
 }
 
 label {
-  @apply text-sm font-semibold text-textMuted;
+  @apply text-sm font-semibold text-slate-600;
 }
 
 small {
-  @apply text-sm text-textMuted;
+  @apply text-sm text-slate-500;
 }
+
+

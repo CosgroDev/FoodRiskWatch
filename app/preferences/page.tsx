@@ -32,15 +32,16 @@ function OptionPills({
       onChange([...values, value]);
     }
   };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <label>{label}</label>
         {values.length > 0 && (
           <button
             type="button"
             onClick={() => onChange([])}
-            className="text-xs font-semibold text-primary hover:text-primaryHover transition"
+            className="text-xs font-semibold text-blue-700 hover:text-blue-800 transition"
           >
             Clear
           </button>
@@ -54,10 +55,10 @@ function OptionPills({
               key={opt}
               type="button"
               onClick={() => toggle(opt)}
-              className={`px-3 py-2 text-sm rounded-lg border transition shadow-[0_4px_10px_rgba(15,23,42,0.05)] ${
+              className={`px-3 py-2 text-sm rounded-lg border transition ${
                 active
-                  ? "bg-primary text-white border-primary"
-                  : "bg-surface text-secondary border-border hover:border-primary/60"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-700 border-slate-300 hover:border-blue-300"
               }`}
             >
               {opt}
@@ -128,77 +129,75 @@ export default function PreferencesPage() {
 
   if (!token) {
     return (
-      <div className="card p-6">
-        <h1 className="text-xl font-bold">Missing token</h1>
-        <p>Open this page from your magic manage link.</p>
+      <div className="content-wrap">
+        <div className="card p-6 max-w-xl">
+          <h1 className="text-xl font-bold">Missing token</h1>
+          <p className="text-slate-600">Open this page from your magic manage link.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="card p-6 space-y-5">
-      <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-base text-primary font-semibold text-sm">
-          <span className="h-2 w-2 rounded-full bg-primary" />
-          Manage alerts
+    <div className="content-wrap space-y-5">
+      <section className="card p-6 md:p-7 space-y-4">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Manage alerts</p>
+          <h1 className="text-2xl font-bold text-slate-900">Your alert filters</h1>
+          <p className="text-sm text-slate-500">
+            Weekly digests are included on the free tier. Daily and instant are shown as preview options.
+          </p>
         </div>
-        <h1 className="text-2xl font-bold">Your alert filters</h1>
-        <p className="text-muted text-sm">
-          Weekly digests are included on the free tier. Daily and instant are previewed for later.
-        </p>
-      </div>
 
-      {loading && <p>Loading…</p>}
-      {error && <p className="text-red-600">{error}</p>}
-      {message && <p className="text-green-700">{message}</p>}
+        {loading && <p className="text-slate-600">Loading...</p>}
+        {error && <p className="text-red-600">{error}</p>}
+        {message && <p className="text-green-700">{message}</p>}
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Hazards" options={hazardOptions} values={hazards} onChange={setHazards} />
-        </div>
-        <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Product categories" options={categoryOptions} values={categories} onChange={setCategories} />
-        </div>
-        <div className="p-3 bg-base border border-border rounded-xl shadow-soft">
-          <OptionPills label="Countries" options={countryOptions} values={countries} onChange={setCountries} />
-        </div>
-      </div>
-
-      <div className="p-3 bg-base border border-border rounded-xl shadow-soft max-w-xs">
-        <div className="grid gap-2">
-          <label>Frequency</label>
-          <div className="flex flex-col gap-2">
-            {[
-              { value: "weekly", label: "Weekly (included)", disabled: false },
-              { value: "daily", label: "Daily (coming soon)", disabled: disabledFrequencies.daily },
-              { value: "instant", label: "Instant (coming soon)", disabled: disabledFrequencies.instant },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={opt.disabled}
-                onClick={() => !opt.disabled && setFrequency(opt.value as typeof frequency)}
-                className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
-                  frequency === opt.value
-                    ? "border-primary bg-primary text-white"
-                    : "border-border bg-surface text-secondary hover:border-primary/60"
-                } ${opt.disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                <span>{opt.label}</span>
-                <span
-                  className={`h-3 w-3 rounded-full ${
-                    frequency === opt.value ? "bg-white" : "bg-border"
-                  }`}
-                />
-              </button>
-            ))}
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <OptionPills label="Hazards" options={hazardOptions} values={hazards} onChange={setHazards} />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <OptionPills label="Product categories" options={categoryOptions} values={categories} onChange={setCategories} />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <OptionPills label="Countries" options={countryOptions} values={countries} onChange={setCountries} />
           </div>
         </div>
-      </div>
 
-      <button className="btn-primary max-w-xs" onClick={save} disabled={saving}>
-        {saving ? "Saving…" : "Save preferences"}
-      </button>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 max-w-md">
+          <div className="grid gap-2">
+            <label>Frequency</label>
+            <div className="flex flex-col gap-2">
+              {[
+                { value: "weekly", label: "Weekly (included)", disabled: false },
+                { value: "daily", label: "Daily (coming soon)", disabled: disabledFrequencies.daily },
+                { value: "instant", label: "Instant (coming soon)", disabled: disabledFrequencies.instant },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  disabled={opt.disabled}
+                  onClick={() => !opt.disabled && setFrequency(opt.value as typeof frequency)}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
+                    frequency === opt.value
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-blue-300"
+                  } ${opt.disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                >
+                  <span>{opt.label}</span>
+                  <span className={`h-3 w-3 rounded-full ${frequency === opt.value ? "bg-white" : "bg-slate-300"}`} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button className="btn-primary max-w-xs" onClick={save} disabled={saving}>
+          {saving ? "Saving..." : "Save preferences"}
+        </button>
+      </section>
     </div>
   );
 }
+
