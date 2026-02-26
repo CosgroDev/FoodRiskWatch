@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="brand-mark">
                 <ShieldIcon className="h-5 w-5" />
               </span>
-              <span className="font-bold text-blue-700 leading-tight">
+              <span className="font-bold leading-tight" style={{ color: "#17C6CF" }}>
                 Food Risk <span className="text-slate-400 font-normal">|</span> Watch
               </span>
             </Link>
